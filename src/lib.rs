@@ -1,6 +1,7 @@
 pub mod notifiers;
 pub mod providers;
 
+use std::env;
 use std::env::VarError;
 
 use thiserror::Error;
@@ -9,8 +10,8 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum LibError {
     // technical errors
-    #[error("Environment variable error")]
-    EnvError { source: VarError },
+    #[error("Environment variable {name} error")]
+    EnvError { name: String, source: VarError },
 
     #[error("Network error")]
     RequestError { source: reqwest::Error },
@@ -27,4 +28,11 @@ pub enum LibError {
 
     #[error("Unknown provider")]
     UnknownProvider { provider: String },
+}
+
+pub fn get_env_var(name: &str) -> Result<String, LibError> {
+    env::var(name).map_err(|source| LibError::EnvError {
+        name: name.to_string(),
+        source,
+    })
 }

@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::env;
 
 use reqwest::blocking::Response;
 use serde::Deserialize;
@@ -88,10 +87,8 @@ impl WebHook {
 impl NotifierFactoryTrait for WebHook {
     fn from_env() -> Result<Box<dyn NotifierTrait>, LibError> {
         // TODO: more explicit error message when missing
-        let event = env::var(ENV_NAME_IFTTT_WEBHOOK_EVENT)
-            .map_err(|source| LibError::EnvError { source })?;
-        let key =
-            env::var(ENV_NAME_IFTTT_WEBHOOK_KEY).map_err(|source| LibError::EnvError { source })?;
+        let event = crate::get_env_var(ENV_NAME_IFTTT_WEBHOOK_EVENT)?;
+        let key = crate::get_env_var(ENV_NAME_IFTTT_WEBHOOK_KEY)?;
         Ok(Box::new(WebHook::new(&event, &key)))
     }
 }
