@@ -1,12 +1,10 @@
 use std::collections::HashMap;
 use std::env;
-use std::error::Error;
 
-use colored::Colorize;
 use reqwest::blocking::Response;
 use serde::Deserialize;
 
-use crate::MyError;
+use crate::LibError;
 
 use super::{NotifierFactoryTrait, NotifierTrait};
 
@@ -48,74 +46,91 @@ impl WebHook {
     }
 
     // TODO: add a selector for either json or valueX api
-    fn send(&self, params: HashMap<&str, &str>) -> Result<Response, reqwest::Error> {
+    fn query(&self, params: HashMap<&str, &str>) -> Result<Response, LibError> {
         let url = format!(
             "https://maker.ifttt.com/trigger/{}/json/with/key/{}",
             self.event, self.key
         );
         let client = reqwest::blocking::Client::new();
-        client.post(url).json(&params).send()
-    }
-}
+        let response = client
+            .post(url)
+            .json(&params)
+            .send()
+            .map_err(|source| LibError::RequestError { source })?;
 
-impl NotifierFactoryTrait for WebHook {
-    fn from_env() -> Result<Box<dyn NotifierTrait>, Box<dyn Error>> {
-        // TODO: more explicit error message when missing
-        let event = env::var(ENV_NAME_IFTTT_WEBHOOK_EVENT)?;
-        let key = env::var(ENV_NAME_IFTTT_WEBHOOK_KEY)?;
-        Ok(Box::new(WebHook::new(&event, &key)))
-    }
-}
-
-impl NotifierTrait for WebHook {
-    fn notify(&self, content: &str) -> Result<(), Box<dyn Error>> {
-        // build request
-        let params = HashMap::from([("available", content)]);
-
-        // TODO: handle dns error gracefully
-        let response = self.send(params)?;
-
-        // handle api error
         if response.status().is_success() {
-            return Ok(());
-        } else if response.status().is_client_error() {
-            let response: IftttApiError = response.json()?;
+            return Ok(response);
+        }
+
+        if response.status().is_client_error() {
+            let response: IftttApiError = response
+                .json()
+                .map_err(|source| LibError::RequestError { source })?;
+
             let messages = response
                 .errors
                 .iter()
                 .map(|e| e.message.clone())
                 .collect::<Vec<String>>()
                 .join(" / ");
-            return Err(Box::new(MyError::new(&messages)));
-        } else {
-            return Err(Box::new(MyError::new("Unknown IFTTT-WEBHOOK error")));
+
+            return Err(LibError::ApiError {
+                message: format!("Error during IFTTT-WEBHOOK query: {}", messages),
+            });
         }
+
+        return Err(LibError::ApiError {
+            message: "Unknown IFTTT-WEBHOOK error".to_string(),
+        });
+    }
+}
+
+impl NotifierFactoryTrait for WebHook {
+    fn from_env() -> Result<Box<dyn NotifierTrait>, LibError> {
+        // TODO: more explicit error message when missing
+        let event = env::var(ENV_NAME_IFTTT_WEBHOOK_EVENT)
+            .map_err(|source| LibError::EnvError { source })?;
+        let key =
+            env::var(ENV_NAME_IFTTT_WEBHOOK_KEY).map_err(|source| LibError::EnvError { source })?;
+        Ok(Box::new(WebHook::new(&event, &key)))
+    }
+}
+
+impl NotifierTrait for WebHook {
+    fn notify(&self, content: &str) -> Result<(), LibError> {
+        // build request
+        let params = HashMap::from([("available", content)]);
+
+        let response = self.query(params)?;
+        Ok(())
     }
 
-    fn test(&self) -> Result<(), Box<dyn Error>> {
+    fn test(&self) -> Result<(), LibError> {
         let mut params = HashMap::new();
         params.insert("value1", "foo");
         params.insert("value2", "bar");
         params.insert("value3", "baz");
         params.insert("foo", "bar");
 
-        // TODO: handle dns error gracefully
-        let response = self.send(params)?;
-
-        if response.status().is_success() {
-            println!("{}: Request sent.", "Success".green());
-        } else if response.status().is_client_error() {
-            let response: IftttApiError = response.json()?;
-            let messages = response
-                .errors
-                .iter()
-                .map(|e| e.message.clone())
-                .collect::<Vec<String>>()
-                .join(" / ");
-            println!("{}: {}", "Failure".red(), messages);
-        } else {
-            println!("{}: code {}", "Unknown".blue(), response.status());
-        }
+        let response = self.query(params)?;
         Ok(())
     }
 }
+
+// use colored::Colorize;
+// if response.status().is_success() {
+//     println!("{}: Request sent.", "Success".green());
+// } else if response.status().is_client_error() {
+//     let response: IftttApiError = response
+//         .json()
+//         .map_err(|source| LibError::NetworkError { source })?;
+//     let messages = response
+//         .errors
+//         .iter()
+//         .map(|e| e.message.clone())
+//         .collect::<Vec<String>>()
+//         .join(" / ");
+//     println!("{}: {}", "Failure".red(), messages);
+// } else {
+//     println!("{}: code {}", "Unknown".blue(), response.status());
+// }

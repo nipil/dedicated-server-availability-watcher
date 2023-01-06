@@ -1,12 +1,11 @@
 pub mod ovh;
 
-use std::error::Error;
 use std::{thread, time};
 
 use colored::Colorize;
 
 use crate::notifiers;
-use crate::MyError;
+use crate::LibError;
 
 pub struct ServerInfo {
     pub reference: String,
@@ -17,21 +16,23 @@ pub struct ServerInfo {
 
 pub trait ProviderTrait {
     // TODO: add "name" class fn
-    fn inventory(&self, all: bool) -> Result<Vec<ServerInfo>, Box<dyn Error>>;
-    fn check(&self, server: &str) -> Result<bool, Box<dyn Error>>;
+    fn inventory(&self, all: bool) -> Result<Vec<ServerInfo>, LibError>;
+    fn check(&self, server: &str) -> Result<bool, LibError>;
 }
 
 pub trait ProviderFactoryTrait {
-    fn from_env() -> Result<Box<dyn ProviderTrait>, Box<dyn Error>>;
+    fn from_env() -> Result<Box<dyn ProviderTrait>, LibError>;
 }
 
 pub struct Factory;
 
 impl Factory {
-    fn from_env_by_name(s: &str) -> Result<Box<dyn ProviderTrait>, Box<dyn Error>> {
-        match s {
+    fn from_env_by_name(provider: &str) -> Result<Box<dyn ProviderTrait>, LibError> {
+        match provider {
             "ovh" => ovh::Ovh::from_env(),
-            _ => Err(Box::new(MyError::new(&format!("Unknown provider '{}'", s)))),
+            _ => Err(LibError::UnknownProvider {
+                provider: provider.to_string(),
+            }),
         }
     }
 
@@ -51,7 +52,7 @@ impl Runner {
         }
     }
 
-    pub fn run_inventory(provider: &str, all: bool) -> Result<(), Box<dyn Error>> {
+    pub fn run_inventory(provider: &str, all: bool) -> Result<(), LibError> {
         let provider = Factory::from_env_by_name(provider)?;
 
         println!("Working...");
@@ -85,7 +86,7 @@ impl Runner {
     fn check_servers(
         provider: &Box<dyn ProviderTrait>,
         servers: &Vec<String>,
-    ) -> Result<Vec<String>, Box<dyn Error>> {
+    ) -> Result<Vec<String>, LibError> {
         let mut available = Vec::new();
         for server in servers.iter() {
             // TODO: do not stop on first fail ?
@@ -101,7 +102,7 @@ impl Runner {
         servers: &Vec<String>,
         notifier: &Option<String>,
         interval: &Option<u16>,
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<(), LibError> {
         let provider = &Factory::from_env_by_name(provider)?;
 
         let notifier = &match notifier {

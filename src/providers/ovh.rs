@@ -1,11 +1,10 @@
 use std::env;
-use std::error::Error;
 
 use colored::Colorize;
 use reqwest::blocking::Response;
 use serde::Deserialize;
 
-use crate::MyError;
+use crate::LibError;
 
 use super::{ProviderFactoryTrait, ProviderTrait, ServerInfo};
 
@@ -65,7 +64,7 @@ impl Ovh {
         }
     }
 
-    fn query(&self, server: Option<&str>) -> Result<Response, reqwest::Error> {
+    fn query_available_servers(&self, server: Option<&str>) -> Result<Response, LibError> {
         let mut query: Vec<(&str, &str)> = Vec::new();
 
         match &self.excluded_datacenters {
@@ -83,28 +82,35 @@ impl Ovh {
         }
 
         let client = reqwest::blocking::Client::new();
-        client.get(OVH_URL).query(&query).send()
+        let response = client
+            .get(OVH_URL)
+            .query(&query)
+            .send()
+            .map_err(|source| LibError::RequestError { source })?;
+
+        if !response.status().is_success() {
+            return Err(LibError::ApiError {
+                message: format!("Error during OVH query: code {}", response.status()),
+            });
+        }
+
+        Ok(response)
     }
 }
 
 impl ProviderFactoryTrait for Ovh {
-    fn from_env() -> Result<Box<dyn ProviderTrait>, Box<dyn Error>> {
+    fn from_env() -> Result<Box<dyn ProviderTrait>, LibError> {
         Ok(Box::new(Ovh::new()))
     }
 }
 
 impl ProviderTrait for Ovh {
-    fn inventory(&self, all: bool) -> Result<Vec<ServerInfo>, Box<dyn Error>> {
-        let response = self.query(None)?;
+    fn inventory(&self, all: bool) -> Result<Vec<ServerInfo>, LibError> {
+        let response = self.query_available_servers(None)?;
 
-        if !response.status().is_success() {
-            return Err(Box::new(MyError::new(&format!(
-                "Error during OVH query: code {}",
-                response.status()
-            ))));
-        }
-
-        let response: Vec<OvhDedicatedServerInformation> = response.json()?;
+        let response: Vec<OvhDedicatedServerInformation> = response
+            .json()
+            .map_err(|source| LibError::RequestError { source })?;
 
         let mut infos = Vec::new();
 
@@ -133,30 +139,23 @@ impl ProviderTrait for Ovh {
         Ok(infos)
     }
 
-    fn check(&self, server: &str) -> Result<bool, Box<dyn Error>> {
-        let response = self.query(Some(server))?;
+    fn check(&self, server: &str) -> Result<bool, LibError> {
+        let response = self.query_available_servers(Some(server))?;
 
-        if !response.status().is_success() {
-            return Err(Box::new(MyError::new(&format!(
-                "Error during OVH query: code {}",
-                response.status()
-            ))));
-        }
-
-        let response: Vec<OvhDedicatedServerInformation> = response.json()?;
+        let response: Vec<OvhDedicatedServerInformation> = response
+            .json()
+            .map_err(|source| LibError::RequestError { source })?;
 
         if response.is_empty() {
-            return Err(Box::new(MyError::new(&format!(
-                "Server reference {} not found",
-                server.red()
-            ))));
+            return Err(LibError::UnknownServer {
+                server: server.to_string(),
+            });
         }
 
         if response.len() > 1 {
-            return Err(Box::new(MyError::new(&format!(
-                "Multiple references found for server {}",
-                server.red()
-            ))));
+            return Err(LibError::ApiError {
+                message: format!("Multiple references found for server {}", server),
+            });
         }
 
         Ok(response[0].is_available())

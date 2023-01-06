@@ -1,27 +1,27 @@
 pub mod ifttt;
 
-use std::error::Error;
-
 use colored::Colorize;
 
-use crate::MyError;
+use crate::LibError;
 
 pub trait NotifierTrait {
-    fn notify(&self, content: &str) -> Result<(), Box<dyn Error>>;
-    fn test(&self) -> Result<(), Box<dyn Error>>;
+    fn notify(&self, content: &str) -> Result<(), LibError>;
+    fn test(&self) -> Result<(), LibError>;
 }
 
 pub trait NotifierFactoryTrait {
-    fn from_env() -> Result<Box<dyn NotifierTrait>, Box<dyn Error>>;
+    fn from_env() -> Result<Box<dyn NotifierTrait>, LibError>;
 }
 
 pub struct Factory;
 
 impl Factory {
-    pub fn from_env_by_name(s: &str) -> Result<Box<dyn NotifierTrait>, Box<dyn Error>> {
-        match s {
+    pub fn from_env_by_name(notifier: &str) -> Result<Box<dyn NotifierTrait>, LibError> {
+        match notifier {
             "ifttt-webhook" => ifttt::WebHook::from_env(),
-            _ => Err(Box::new(MyError::new(&format!("Unknown notifier '{}'", s)))),
+            _ => Err(LibError::UnknownNotifier {
+                notifier: notifier.to_string(),
+            }),
         }
     }
 
@@ -42,9 +42,10 @@ impl Runner {
         }
     }
 
-    pub fn run_test(name: &str) -> Result<(), Box<dyn Error>> {
+    pub fn run_test(name: &str) -> Result<(), LibError> {
         let notifier = Factory::from_env_by_name(name)?;
         notifier.test()?;
+        println!("{}", "Notification sent".to_string().green());
         Ok(())
     }
 }
