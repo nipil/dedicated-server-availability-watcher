@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 use dedicated_server_availability_watcher::{notifiers, providers};
-use std::error::Error;
+
+use anyhow::Result;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -71,16 +72,16 @@ enum NotifierCommands {
     },
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
         // Notifier actions
         Commands::Notifier { subcommand } => match subcommand {
-            None => notifiers::Runner::run_list(),
+            None => notifiers::Runner::run_list()?,
 
             Some(sub) => match sub {
-                NotifierCommands::List {} => notifiers::Runner::run_list(),
+                NotifierCommands::List {} => notifiers::Runner::run_list()?,
 
                 NotifierCommands::Test { notifier } => notifiers::Runner::run_test(notifier)?,
             },
@@ -88,10 +89,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         // Provider actions
         Commands::Provider { subcommand } => match subcommand {
-            None => providers::Runner::run_list(),
+            None => providers::Runner::run_list()?,
 
             Some(sub) => match sub {
-                ProviderCommands::List {} => providers::Runner::run_list(),
+                ProviderCommands::List {} => providers::Runner::run_list()?,
 
                 ProviderCommands::Inventory { provider, all } => {
                     providers::Runner::run_inventory(provider, *all)?;

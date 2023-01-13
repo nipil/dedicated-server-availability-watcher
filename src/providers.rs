@@ -2,6 +2,9 @@ pub mod ovh;
 
 use std::{thread, time};
 
+use anyhow;
+use anyhow::Context;
+
 use colored::Colorize;
 
 use crate::notifiers;
@@ -45,18 +48,22 @@ impl Factory {
 pub struct Runner;
 
 impl Runner {
-    pub fn run_list() {
+    pub fn run_list() -> anyhow::Result<()> {
         println!("Available providers:");
         for provider in Factory::list_available().iter() {
             println!("- {}", provider.green());
         }
+        Ok(())
     }
 
-    pub fn run_inventory(provider: &str, all: bool) -> Result<(), LibError> {
-        let provider = Factory::from_env_by_name(provider)?;
+    pub fn run_inventory(provider_name: &str, all: bool) -> anyhow::Result<()> {
+        let provider = Factory::from_env_by_name(provider_name)
+            .with_context(|| format!("while setting up provider {}", provider_name))?;
 
         println!("Working...");
-        let inventory = provider.inventory(all)?;
+        let inventory = provider
+            .inventory(all)
+            .with_context(|| format!("while getting inventory for provider {}", provider_name))?;
 
         if inventory.is_empty() {
             println!("No servers found");
@@ -86,11 +93,14 @@ impl Runner {
     fn check_servers(
         provider: &Box<dyn ProviderTrait>,
         servers: &Vec<String>,
-    ) -> Result<Vec<String>, LibError> {
+    ) -> anyhow::Result<Vec<String>> {
         let mut available = Vec::new();
         for server in servers.iter() {
             // TODO: do not stop on first fail ?
-            if provider.check(server)? {
+            if provider
+                .check(server)
+                .with_context(|| format!("while checking for server {}", server))?
+            {
                 available.push(server.clone());
             }
         }
@@ -98,21 +108,26 @@ impl Runner {
     }
 
     pub fn run_check(
-        provider: &str,
+        provider_name: &str,
         servers: &Vec<String>,
         notifier: &Option<String>,
         interval: &Option<u16>,
-    ) -> Result<(), LibError> {
-        let provider = &Factory::from_env_by_name(provider)?;
+    ) -> anyhow::Result<()> {
+        let provider = &Factory::from_env_by_name(provider_name)
+            .with_context(|| format!("while setting up provider {}", provider_name))?;
 
         let notifier = &match notifier {
-            Some(notifier) => Some(notifiers::Factory::from_env_by_name(notifier)?),
+            Some(notifier) => Some(
+                notifiers::Factory::from_env_by_name(notifier)
+                    .with_context(|| format!("while setting up notifier {}", notifier))?,
+            ),
             None => None,
         };
 
         let mut last_count = 0;
         loop {
-            let available = Self::check_servers(provider, servers)?;
+            let available = Self::check_servers(provider, servers)
+                .with_context(|| format!("while checking provider {}", provider_name))?;
             if available.len() != last_count {
                 last_count = available.len();
 
@@ -129,8 +144,8 @@ impl Runner {
                         println!("{}", result.green());
                     }
                     Some(notifier) => {
-                        // TODO: add provider name
-                        notifier.notify(&result)?;
+                        // TODO: add notifier name
+                        notifier.notify(&result).context("while notifying")?;
                     }
                 }
             }

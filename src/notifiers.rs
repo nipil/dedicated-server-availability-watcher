@@ -1,5 +1,7 @@
 pub mod ifttt;
 
+use anyhow;
+use anyhow::Context;
 use colored::Colorize;
 
 use crate::LibError;
@@ -35,16 +37,20 @@ impl Factory {
 pub struct Runner;
 
 impl Runner {
-    pub fn run_list() {
+    pub fn run_list() -> anyhow::Result<()> {
         println!("Available notifiers:");
         for notifier in Factory::list_available().iter() {
             println!("- {}", notifier.green());
         }
+        Ok(())
     }
 
-    pub fn run_test(name: &str) -> Result<(), LibError> {
-        let notifier = Factory::from_env_by_name(name)?;
-        notifier.test()?;
+    pub fn run_test(name: &str) -> anyhow::Result<()> {
+        let notifier = Factory::from_env_by_name(name)
+            .with_context(|| format!("while setting up notifier {}", name))?;
+        notifier
+            .test()
+            .with_context(|| format!("while testing notifier {}", name))?;
         println!("{}", "Notification sent".to_string().green());
         Ok(())
     }
