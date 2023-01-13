@@ -26,7 +26,7 @@ pub enum LibError {
     #[error("Unknown notifier {notifier}")]
     UnknownNotifier { notifier: String },
 
-    #[error("Unknown provider")]
+    #[error("Unknown provider {provider} ")]
     UnknownProvider { provider: String },
 }
 

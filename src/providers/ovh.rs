@@ -1,6 +1,5 @@
 use std::env;
 
-use colored::Colorize;
 use reqwest::blocking::Response;
 use serde::Deserialize;
 
