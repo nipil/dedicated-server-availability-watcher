@@ -9,7 +9,7 @@ use crate::LibError;
 /// Defines the expected behaviour of every notifier handler.
 pub trait NotifierTrait {
     /// Sends a string as notification.
-    fn notify(&self, content: &str) -> Result<(), LibError>;
+    fn notify(&self, content: &Vec<String>) -> Result<(), LibError>;
     /// Does whatever is required to test the notifier.
     fn test(&self) -> Result<(), LibError>;
 }

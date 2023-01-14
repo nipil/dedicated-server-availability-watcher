@@ -145,16 +145,21 @@ impl NotifierFactoryTrait for WebHook {
 
 impl NotifierTrait for WebHook {
     /// Sends an notification using the provided data.
-    fn notify(&self, content: &str) -> Result<(), LibError> {
-        // build request
-        // TODO: handle variants
+    fn notify(&self, content: &Vec<String>) -> Result<(), LibError> {
         let mut params = HashMap::new();
+
+        // this is outside the match so that it lives beyond
+        // the inner statement and can be borrowed by query
+        let joined = content.join(", ");
+
+        // handles variant
         match self.variant {
             WebHookVariant::Value => {
-                params.insert("value1", content);
+                params.insert("value1", joined.as_str());
             }
             WebHookVariant::Json => {
-                params.insert("available", content);
+                // TODO: add actual json array !
+                params.insert("available", joined.as_str());
             }
         }
 

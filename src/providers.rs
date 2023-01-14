@@ -157,21 +157,14 @@ impl Runner {
             if available.len() != last_count {
                 last_count = available.len();
 
-                // build result
-                let result = if !available.is_empty() {
-                    available.join(", ")
-                } else {
-                    "".to_string()
-                };
-
                 // notify result if necessary
                 match notifier {
                     None => {
-                        println!("{}", result.green());
+                        println!("{}", available.join(", ").green());
                     }
                     Some(notifier) => {
                         // TODO: add notifier name in context
-                        notifier.notify(&result).context("while notifying")?;
+                        notifier.notify(&available).context("while notifying")?;
                     }
                 }
             }
