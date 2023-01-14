@@ -9,10 +9,13 @@ use super::{ProviderFactoryTrait, ProviderTrait, ServerInfo};
 
 // OVH implementation
 
+/// Common environment variable to eventually filter the queries.
 const ENV_NAME_OVH_EXCLUDE_DATACENTER: &str = "OVH_EXCLUDE_DATACENTER";
 
+/// Provider API endpoint.
 const OVH_URL: &str = "https://api.ovh.com/1.0/dedicated/server/datacenter/availabilities";
 
+/// Used for API result deserialisation.
 #[derive(Deserialize)]
 struct OvhDedicatedServerInformation {
     datacenters: Vec<OvhDedicatedServerDatacenterAvailability>,
@@ -21,6 +24,7 @@ struct OvhDedicatedServerInformation {
     server: String,
 }
 
+/// Used for API result deserialisation.
 impl OvhDedicatedServerInformation {
     fn is_available(&self) -> bool {
         for datacenter in self.datacenters.iter() {
@@ -32,6 +36,7 @@ impl OvhDedicatedServerInformation {
     }
 }
 
+/// Used for API result deserialisation.
 #[derive(Deserialize)]
 struct OvhDedicatedServerDatacenterAvailability {
     datacenter: String,
@@ -39,6 +44,7 @@ struct OvhDedicatedServerDatacenterAvailability {
 }
 
 impl OvhDedicatedServerDatacenterAvailability {
+    /// Evaluates availability.
     fn is_available(&self) -> bool {
         match self.availability.as_str() {
             "unavailable" => return false,
@@ -48,11 +54,15 @@ impl OvhDedicatedServerDatacenterAvailability {
     }
 }
 
+/// Gets server inventory and availability.
 pub struct Ovh {
+    /// Used to exclude datacenters by their id.
+    /// Examples : ca,bhs,fr,gra,rbx,sbg
     excluded_datacenters: Option<String>,
 }
 
 impl Ovh {
+    /// Builds a new instance.
     fn new() -> Ovh {
         let p = env::var(ENV_NAME_OVH_EXCLUDE_DATACENTER)
             .unwrap_or_default()
@@ -63,6 +73,8 @@ impl Ovh {
         }
     }
 
+    /// Gets availability for specified server types.
+    /// `server`: optionally used to query for a single server type.
     fn query_available_servers(&self, server: Option<&str>) -> Result<Response, LibError> {
         let mut query: Vec<(&str, &str)> = Vec::new();
 
@@ -76,6 +88,7 @@ impl Ovh {
             }
         }
 
+        // Handles optional filtering.
         if let Some(server) = server {
             query.push(("server", server));
         }
@@ -98,12 +111,14 @@ impl Ovh {
 }
 
 impl ProviderFactoryTrait for Ovh {
+    /// Builds an Ovh provider from environment variables.
     fn from_env() -> Result<Box<dyn ProviderTrait>, LibError> {
         Ok(Box::new(Ovh::new()))
     }
 }
 
 impl ProviderTrait for Ovh {
+    /// Sends an notification using the provided data.
     fn inventory(&self, all: bool) -> Result<Vec<ServerInfo>, LibError> {
         let response = self.query_available_servers(None)?;
 
@@ -138,6 +153,7 @@ impl ProviderTrait for Ovh {
         Ok(infos)
     }
 
+    /// Checks provider for the availability of a given server type.
     fn check(&self, server: &str) -> Result<bool, LibError> {
         let response = self.query_available_servers(Some(server))?;
 

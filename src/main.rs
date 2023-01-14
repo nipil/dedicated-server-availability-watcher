@@ -6,7 +6,7 @@ use anyhow::Result;
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    // main commands
+    /// Main commands
     #[command(subcommand)]
     command: Commands,
 }
@@ -41,7 +41,7 @@ enum ProviderCommands {
         all: bool,
     },
 
-    // Test server type availability
+    /// Checks provider for server availability
     Check {
         /// Provider
         provider: String,
