@@ -23,8 +23,7 @@ pub trait NotifierFactoryTrait {
 /// Trait to help create notifiers
 pub struct Factory;
 
-// TODO:
-// extract the vec! and the match into a hashmap holding closures
+// TODO: extract the vec! and the match into a hashmap holding closures
 // that way there is a single source of truth for notifiers
 impl Factory {
     /// Selects the desired notifier type and build it from environment variables.

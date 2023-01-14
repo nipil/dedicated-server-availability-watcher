@@ -34,8 +34,7 @@ pub trait ProviderFactoryTrait {
     fn from_env() -> Result<Box<dyn ProviderTrait>, LibError>;
 }
 
-// TODO:
-// extract the vec! and the match into a hashmap holding closures
+// TODO: extract the vec! and the match into a hashmap holding closures
 // that way there is a single source of truth for notifiers
 pub struct Factory;
 
@@ -116,7 +115,7 @@ impl Runner {
     ) -> anyhow::Result<Vec<String>> {
         let mut available = Vec::new();
         for server in servers.iter() {
-            // TODO: do not stop on first fail ?
+            // FIXME: do not stop on first fail ?
             if provider
                 .check(server)
                 .with_context(|| format!("while checking for server {}", server))?
@@ -153,7 +152,7 @@ impl Runner {
                 .with_context(|| format!("while checking provider {}", provider_name))?;
 
             // Only when a change happens do we consider notifying of the latest result
-            // TODO: need better comparison to detect changes from "A,B" to "A,C"
+            // FIXME: need better comparison to detect changes from "A,B" to "A,C"
             if available.len() != last_count {
                 last_count = available.len();
 

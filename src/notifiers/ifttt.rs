@@ -53,19 +53,19 @@ impl WebHook {
         let variant = match variant {
             "value" => WebHookVariant::Value,
             "json" => WebHookVariant::Json,
-            // TODO: return error instead of panicking
+            // FIXME: return error instead of panicking
             _ => panic!("Invalid ifttt webhook variant"),
         };
 
         // TODO: sanitize inputs according to notifier API format spec.
         let event = event.trim().to_string();
         if event.is_empty() {
-            // TODO: return error instead of panicking
+            // FIXME: return error instead of panicking
             panic!("Ifttt webhook event should not be empty");
         }
         let key = key.trim().to_string();
         if key.is_empty() {
-            // TODO: return error instead of panicking
+            // FIXME: return error instead of panicking
             panic!("Ifttt webhook key shoult not be empty");
         }
 
@@ -94,7 +94,6 @@ impl WebHook {
     }
 
     /// Sends the actual API request.
-    // TODO: add a selector for either json or valueX api
     fn query(&self, params: HashMap<&str, &str>) -> Result<Response, LibError> {
         let url = self.get_url();
         let client = reqwest::blocking::Client::new();
@@ -158,7 +157,7 @@ impl NotifierTrait for WebHook {
                 params.insert("value1", joined.as_str());
             }
             WebHookVariant::Json => {
-                // TODO: add actual json array !
+                // FIXME: add actual json array !
                 params.insert("available", joined.as_str());
             }
         }
