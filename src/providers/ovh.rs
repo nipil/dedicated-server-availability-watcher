@@ -63,7 +63,7 @@ pub struct Ovh {
 
 impl Ovh {
     /// Builds a new instance.
-    fn new() -> Ovh {
+    fn new() -> Self {
         let p = env::var(ENV_NAME_OVH_EXCLUDE_DATACENTER)
             .unwrap_or_default()
             .trim()

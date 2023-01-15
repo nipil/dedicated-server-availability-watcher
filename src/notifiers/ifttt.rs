@@ -45,7 +45,7 @@ pub struct WebHook {
 
 impl WebHook {
     /// Builds a new instance.
-    fn new(variant: &str, event: &str, key: &str) -> WebHook {
+    fn new(variant: &str, event: &str, key: &str) -> Self {
         let variant = variant.trim();
         if variant.is_empty() {
             panic!("Ifttt webhook variant shoult not be empty");
