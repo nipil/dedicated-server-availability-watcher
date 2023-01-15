@@ -173,13 +173,16 @@ impl Runner {
                 }
             }
 
-            // exit if a single check is requested
-            if interval.is_none() {
-                break;
+            match interval {
+                None => {
+                    // exit if a single check is requested
+                    break;
+                }
+                Some(interval) => {
+                    // otherwise, wait for the specified duration
+                    thread::sleep(time::Duration::from_secs((*interval).into()));
+                }
             }
-
-            // otherwise, wait for the specified duration
-            thread::sleep(time::Duration::from_secs(interval.unwrap().into()));
         }
 
         Ok(())
