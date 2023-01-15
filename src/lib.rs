@@ -11,8 +11,8 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum LibError {
     // technical errors
-    /// Missing or invalid environment variable.
-    #[error("Environment variable {name} error")]
+    /// Missing or empty environment variable.
+    #[error("Environment variable `{name}` error")]
     EnvError { name: String, source: VarError },
 
     /// Invalid value errors
@@ -24,7 +24,7 @@ pub enum LibError {
     RequestError { source: reqwest::Error },
 
     /// Anything which happen on the logical request (ie. network is ok).
-    #[error("API error {message}")]
+    #[error("API error `{message}`")]
     ApiError { message: String },
 
     /// Anything which happen upon json serialization/deserialization.
@@ -33,16 +33,16 @@ pub enum LibError {
 
     // logic errors
     /// Unknown server reference.
-    #[error("Unknown server {server}")]
+    #[error("Unknown server `{server}`")]
     UnknownServer { server: String },
 
     // non existing handlers.
     /// Requested notifier does not exist.
-    #[error("Unknown notifier {notifier}")]
+    #[error("Unknown notifier `{notifier}`")]
     UnknownNotifier { notifier: String },
 
     /// Requested provider does not exist.
-    #[error("Unknown provider {provider} ")]
+    #[error("Unknown provider `{provider}` ")]
     UnknownProvider { provider: String },
 }
 
