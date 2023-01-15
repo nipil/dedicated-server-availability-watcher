@@ -15,6 +15,10 @@ pub enum LibError {
     #[error("Environment variable {name} error")]
     EnvError { name: String, source: VarError },
 
+    /// Invalid value errors
+    #[error("Invalid variable `{name}` error with value `{value}`")]
+    ValueError { name: String, value: String },
+
     /// Anything from DNS resolution error, to connection time out...
     #[error("Network error")]
     RequestError { source: reqwest::Error },

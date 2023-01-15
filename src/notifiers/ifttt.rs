@@ -45,35 +45,40 @@ pub struct WebHook {
 
 impl WebHook {
     /// Builds a new instance.
-    fn new(variant: &str, event: &str, key: &str) -> Self {
+    fn new(variant: &str, event: &str, key: &str) -> Result<Self, LibError> {
         let variant = variant.trim();
-        if variant.is_empty() {
-            panic!("Ifttt webhook variant shoult not be empty");
-        }
         let variant = match variant {
             "value" => WebHookVariant::Value,
             "json" => WebHookVariant::Json,
-            // FIXME: return error instead of panicking
-            _ => panic!("Invalid ifttt webhook variant"),
+            _ => {
+                return Err(LibError::ValueError {
+                    name: "ifttt webhook variant".into(),
+                    value: variant.into(),
+                });
+            }
         };
 
         // TODO: sanitize inputs according to notifier API format spec.
         let event = event.trim().to_string();
         if event.is_empty() {
-            // FIXME: return error instead of panicking
-            panic!("Ifttt webhook event should not be empty");
+            return Err(LibError::ValueError {
+                name: "ifttt webhook event".into(),
+                value: event,
+            });
         }
         let key = key.trim().to_string();
         if key.is_empty() {
-            // FIXME: return error instead of panicking
-            panic!("Ifttt webhook key shoult not be empty");
+            return Err(LibError::ValueError {
+                name: "ifttt webhook key".into(),
+                value: key,
+            });
         }
 
-        WebHook {
+        Ok(WebHook {
             event,
             key,
             variant,
-        }
+        })
     }
 
     /// Builds ifttt URL according to selected variant.
@@ -138,7 +143,7 @@ impl NotifierFactoryTrait for WebHook {
         let variant = crate::get_env_var(ENV_NAME_IFTTT_WEBHOOK_VARIANT)?;
         let event = crate::get_env_var(ENV_NAME_IFTTT_WEBHOOK_EVENT)?;
         let key = crate::get_env_var(ENV_NAME_IFTTT_WEBHOOK_KEY)?;
-        Ok(Box::new(WebHook::new(&variant, &event, &key)))
+        Ok(Box::new(WebHook::new(&variant, &event, &key)?))
     }
 }
 
