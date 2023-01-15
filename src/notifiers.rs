@@ -4,12 +4,12 @@ use anyhow;
 use anyhow::Context;
 use colored::Colorize;
 
-use crate::LibError;
+use crate::{LibError, ProviderCheckResult};
 
 /// Defines the expected behaviour of every notifier handler.
 pub trait NotifierTrait {
     /// Sends a string as notification.
-    fn notify(&self, content: &Vec<String>) -> Result<(), LibError>;
+    fn notify(&self, result: &ProviderCheckResult) -> Result<(), LibError>;
     /// Does whatever is required to test the notifier.
     fn test(&self) -> Result<(), LibError>;
 }

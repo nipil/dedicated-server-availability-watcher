@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use reqwest::blocking::Response;
 use serde::Deserialize;
 
-use crate::LibError;
+use crate::{LibError, ProviderCheckResult};
 
 use super::{NotifierFactoryTrait, NotifierTrait};
 
@@ -144,12 +144,12 @@ impl NotifierFactoryTrait for WebHook {
 
 impl NotifierTrait for WebHook {
     /// Sends an notification using the provided data.
-    fn notify(&self, content: &Vec<String>) -> Result<(), LibError> {
+    fn notify(&self, result: &ProviderCheckResult) -> Result<(), LibError> {
         let mut params = HashMap::new();
 
         // this is outside the match so that it lives beyond
         // the inner statement and can be borrowed by query
-        let joined = content.join(", ");
+        let joined = result.available_servers.join(", ");
 
         // handles variant
         match self.variant {

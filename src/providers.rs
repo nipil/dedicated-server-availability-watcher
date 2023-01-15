@@ -9,6 +9,7 @@ use colored::Colorize;
 
 use crate::notifiers;
 use crate::LibError;
+use crate::ProviderCheckResult;
 
 /// Defines the common information returned by `ProviderTrait::inventory()`.
 pub struct ServerInfo {
@@ -112,18 +113,18 @@ impl Runner {
     fn check_servers(
         provider: &Box<dyn ProviderTrait>,
         servers: &Vec<String>,
-    ) -> anyhow::Result<Vec<String>> {
-        let mut available = Vec::new();
+        result: &mut ProviderCheckResult,
+    ) -> anyhow::Result<()> {
         for server in servers.iter() {
             // FIXME: do not stop on first fail ?
             if provider
                 .check(server)
                 .with_context(|| format!("while checking for server {}", server))?
             {
-                available.push(server.clone());
+                result.available_servers.push(server.clone());
             }
         }
-        Ok(available)
+        Ok(())
     }
 
     /// Checks the given provider for availability of specific server types.
@@ -135,9 +136,11 @@ impl Runner {
         notifier: &Option<String>,
         interval: &Option<u16>,
     ) -> anyhow::Result<()> {
+        // builds the provider
         let provider = &Factory::from_env_by_name(provider_name)
             .with_context(|| format!("while setting up provider {}", provider_name))?;
 
+        // initialize notifier if any
         let notifier = &match notifier {
             Some(notifier) => Some(
                 notifiers::Factory::from_env_by_name(notifier)
@@ -148,22 +151,24 @@ impl Runner {
 
         let mut last_count = 0;
         loop {
-            let available = Self::check_servers(provider, servers)
+            // initialize the output structure
+            let mut result = ProviderCheckResult::new(provider_name);
+            Self::check_servers(provider, servers, &mut result)
                 .with_context(|| format!("while checking provider {}", provider_name))?;
 
             // Only when a change happens do we consider notifying of the latest result
             // FIXME: need better comparison to detect changes from "A,B" to "A,C"
-            if available.len() != last_count {
-                last_count = available.len();
+            if result.available_servers.len() != last_count {
+                last_count = result.available_servers.len();
 
                 // notify result if necessary
                 match notifier {
                     None => {
-                        println!("{}", available.join(", ").green());
+                        println!("{}", result.available_servers.join(", ").green());
                     }
                     Some(notifier) => {
                         // TODO: add notifier name in context
-                        notifier.notify(&available).context("while notifying")?;
+                        notifier.notify(&result).context("while notifying")?;
                     }
                 }
             }

@@ -44,3 +44,20 @@ pub fn get_env_var(name: &str) -> Result<String, LibError> {
         source,
     })
 }
+
+/// ProviderCheckResult holds the data between providers and notifiers :
+/// - `provider::check` is the data source
+/// - `notifier::notify` is the data sink
+pub struct ProviderCheckResult {
+    pub provider_name: String,
+    pub available_servers: Vec<String>,
+}
+
+impl ProviderCheckResult {
+    fn new(provider_name: &str) -> Self {
+        ProviderCheckResult {
+            provider_name: provider_name.to_string(),
+            available_servers: Vec::<String>::new(),
+        }
+    }
+}
