@@ -4,6 +4,7 @@ pub mod providers;
 use std::env;
 use std::env::VarError;
 
+use serde::Serialize;
 use thiserror::Error;
 
 /// NotifierError enumerates all possible errors returned by this library.
@@ -21,6 +22,10 @@ pub enum LibError {
     /// Anything which happen on the logical request (ie. network is ok).
     #[error("API error {message}")]
     ApiError { message: String },
+
+    /// Anything which happen upon json serialization/deserialization.
+    #[error("Json error")]
+    JsonError { source: serde_json::Error },
 
     // logic errors
     /// Unknown server reference.
@@ -48,6 +53,7 @@ pub fn get_env_var(name: &str) -> Result<String, LibError> {
 /// ProviderCheckResult holds the data between providers and notifiers :
 /// - `provider::check` is the data source
 /// - `notifier::notify` is the data sink
+#[derive(Debug, Serialize)]
 pub struct ProviderCheckResult {
     pub provider_name: String,
     pub available_servers: Vec<String>,

@@ -94,12 +94,12 @@ impl WebHook {
     }
 
     /// Sends the actual API request.
-    fn query(&self, params: HashMap<&str, &str>) -> Result<Response, LibError> {
+    fn query(&self, body: &str) -> Result<Response, LibError> {
         let url = self.get_url();
         let client = reqwest::blocking::Client::new();
         let response = client
             .post(url)
-            .json(&params)
+            .body(body.to_string())
             .send()
             .map_err(|source| LibError::RequestError { source })?;
 
@@ -145,42 +145,35 @@ impl NotifierFactoryTrait for WebHook {
 impl NotifierTrait for WebHook {
     /// Sends an notification using the provided data.
     fn notify(&self, result: &ProviderCheckResult) -> Result<(), LibError> {
-        let mut params = HashMap::new();
-
         // this is outside the match so that it lives beyond
         // the inner statement and can be borrowed by query
         let joined = result.available_servers.join(", ");
 
         // handles variant
-        match self.variant {
+        let body = match self.variant {
             WebHookVariant::Value => {
-                params.insert("value1", joined.as_str());
+                let mut params = HashMap::new();
+                params.insert("value1", &result.provider_name);
+                let value2 = result.available_servers.join(", ");
+                params.insert("value2", &value2);
+                println!("{:?}", result);
+                serde_json::to_string(&params).map_err(|source| LibError::JsonError { source })?
             }
             WebHookVariant::Json => {
-                // FIXME: add actual json array !
-                params.insert("available", joined.as_str());
+                serde_json::to_string(&result).map_err(|source| LibError::JsonError { source })?
             }
-        }
+        };
 
-        let response = self.query(params)?;
+        let response = self.query(&body)?;
         Ok(())
     }
 
     /// Tests by sending a notification with dummy values.
     fn test(&self) -> Result<(), LibError> {
-        let mut params = HashMap::new();
-        match self.variant {
-            WebHookVariant::Value => {
-                params.insert("value1", "foo");
-                params.insert("value2", "bar");
-                params.insert("value3", "baz");
-            }
-            WebHookVariant::Json => {
-                params.insert("dummy", "content");
-            }
-        }
-
-        let response = self.query(params)?;
-        Ok(())
+        let mut test_result = ProviderCheckResult::new("test_provider");
+        test_result
+            .available_servers
+            .extend(vec!["foo".into(), "bar".into(), "baz".into()]);
+        self.notify(&test_result)
     }
 }
