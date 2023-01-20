@@ -21,6 +21,9 @@ pub struct ServerInfo {
 
 /// Defines the expected behaviour of every provider handler.
 pub trait ProviderTrait {
+    /// Gets the actual name of the provider.
+    fn name(&self) -> &'static str;
+
     /// Prints a list of every kind of server known to the provider.
     /// By default, does not include servers which are out of stock.
     /// Set 'all' to true to include unavailable server kinds.

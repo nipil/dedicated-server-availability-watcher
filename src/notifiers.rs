@@ -8,6 +8,9 @@ use crate::{LibError, ProviderCheckResult};
 
 /// Defines the expected behaviour of every notifier handler.
 pub trait NotifierTrait {
+    /// Gets the actual name of the notifier.
+    fn name(&self) -> &'static str;
+
     /// Sends a string as notification.
     fn notify(&self, result: &ProviderCheckResult) -> Result<(), LibError>;
     /// Does whatever is required to test the notifier.

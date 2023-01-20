@@ -157,6 +157,11 @@ impl NotifierFactoryTrait for WebHook {
 }
 
 impl NotifierTrait for WebHook {
+    /// Gets the actual name of the notifier.
+    fn name(&self) -> &'static str {
+        return IFTTT_WEBHOOK_NAME;
+    }
+
     /// Sends an notification using the provided data.
     fn notify(&self, result: &ProviderCheckResult) -> Result<(), LibError> {
         // this is outside the match so that it lives beyond

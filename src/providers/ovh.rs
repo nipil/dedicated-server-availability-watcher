@@ -121,6 +121,11 @@ impl ProviderFactoryTrait for Ovh {
 }
 
 impl ProviderTrait for Ovh {
+    /// Gets the actual name of the provider.
+    fn name(&self) -> &'static str {
+        return OVH_NAME;
+    }
+
     /// Sends an notification using the provided data.
     fn inventory(&self, all: bool) -> Result<Vec<ServerInfo>, LibError> {
         let response = self.query_available_servers(None)?;
