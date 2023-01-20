@@ -120,7 +120,7 @@ impl Runner {
         result: &mut ProviderCheckResult,
     ) -> anyhow::Result<()> {
         for server in servers.iter() {
-            // FIXME: do not stop on first fail ?
+            // FIXME: do not stop on first fail ? Or remove the iteration and delegate it to the caller (but then, should store previous state)
             if provider
                 .check(server)
                 .with_context(|| format!("while checking for server {}", server))?
@@ -161,7 +161,7 @@ impl Runner {
                 .with_context(|| format!("while checking provider {}", provider_name))?;
 
             // Only when a change happens do we consider notifying of the latest result
-            // FIXME: need better comparison to detect changes from "A,B" to "A,C"
+            // FIXME: need better comparison to detect changes from "A,B" to "A,C" --> sort and store and parse again
             if result.available_servers.len() != last_count {
                 last_count = result.available_servers.len();
 
