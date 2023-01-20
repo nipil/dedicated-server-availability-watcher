@@ -29,7 +29,7 @@ impl Factory {
     /// Selects the desired notifier type and build it from environment variables.
     pub fn from_env_by_name(notifier: &str) -> Result<Box<dyn NotifierTrait>, LibError> {
         match notifier {
-            "ifttt-webhook" => ifttt::WebHook::from_env(),
+            ifttt::IFTTT_WEBHOOK_NAME => ifttt::WebHook::from_env(),
             _ => Err(LibError::UnknownNotifier {
                 notifier: notifier.to_string(),
             }),
@@ -38,7 +38,7 @@ impl Factory {
 
     /// Lists all known notifier types.
     pub fn list_available() -> Vec<&'static str> {
-        vec!["ifttt-webhook"]
+        vec![ifttt::IFTTT_WEBHOOK_NAME]
     }
 }
 

@@ -44,7 +44,7 @@ impl Factory {
     /// Selects the desired provider type and build it from environment variables.
     fn from_env_by_name(provider: &str) -> Result<Box<dyn ProviderTrait>, LibError> {
         match provider {
-            "ovh" => ovh::Ovh::from_env(),
+            ovh::OVH_NAME => ovh::Ovh::from_env(),
             _ => Err(LibError::UnknownProvider {
                 provider: provider.to_string(),
             }),
@@ -53,7 +53,7 @@ impl Factory {
 
     /// Lists all known provider types.
     fn list_available() -> Vec<&'static str> {
-        vec!["ovh"]
+        vec![ovh::OVH_NAME]
     }
 }
 

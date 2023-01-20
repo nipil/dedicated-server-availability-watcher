@@ -9,6 +9,9 @@ use super::{NotifierFactoryTrait, NotifierTrait};
 
 // IFTTT WEBHOOK implementation
 
+/// Common name to identify the provider
+pub const IFTTT_WEBHOOK_NAME: &str = "ifttt-webhook";
+
 /// Common environment variable to select the webhook input variant.
 const ENV_NAME_IFTTT_WEBHOOK_VARIANT: &str = "IFTTT_WEBHOOK_VARIANT";
 

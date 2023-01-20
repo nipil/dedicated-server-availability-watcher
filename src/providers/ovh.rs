@@ -9,6 +9,9 @@ use super::{ProviderFactoryTrait, ProviderTrait, ServerInfo};
 
 // OVH implementation
 
+/// Common name to identify the provider
+pub const OVH_NAME: &str = "ovh";
+
 /// Common environment variable to eventually filter the queries.
 const ENV_NAME_OVH_EXCLUDE_DATACENTER: &str = "OVH_EXCLUDE_DATACENTER";
 
