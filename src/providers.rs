@@ -32,6 +32,7 @@ pub trait ProviderTrait {
 
 /// Helps create providers
 pub trait ProviderFactoryTrait {
+    /// Builds an instance from environment variables
     fn from_env() -> Result<Box<dyn ProviderTrait>, LibError>;
 }
 

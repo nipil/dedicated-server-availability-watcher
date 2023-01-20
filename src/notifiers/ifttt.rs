@@ -58,7 +58,9 @@ impl WebHook {
             }
         };
 
-        // TODO: sanitize inputs according to notifier API format spec.
+        // Could not sanitize IFTTT input better, as they don't even follow their own spec:
+        // webhook even says to use only letters, numbers and underscored, but it actually
+        // allows - and # ... So i do not even try to sanitize.
         let event = event.trim().to_string();
         if event.is_empty() {
             return Err(LibError::ValueError {
@@ -66,6 +68,10 @@ impl WebHook {
                 value: event,
             });
         }
+
+        // Could not sanitize IFTTT input better, as i have not found their key spec:
+        // it seems to be 22 character of letters and numbers, but why risk a future
+        // locking false positive trigger ? So again, i will not even try.
         let key = key.trim().to_string();
         if key.is_empty() {
             return Err(LibError::ValueError {

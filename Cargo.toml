@@ -4,6 +4,7 @@ description = "Check and notify about dedicated servers availability"
 version = "0.1.0"
 edition = "2021"
 
+# TODO: reduce dependencies
 [dependencies]
 anyhow = "1.0.68"
 clap = { version = "4.0.29", features = ["derive", "cargo"] }
