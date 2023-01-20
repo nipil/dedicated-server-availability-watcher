@@ -171,8 +171,9 @@ impl Runner {
                         println!("{}", result.available_servers.join(", ").green());
                     }
                     Some(notifier) => {
-                        // TODO: add notifier name in context
-                        notifier.notify(&result).context("while notifying")?;
+                        notifier
+                            .notify(&result)
+                            .with_context(|| format!("while notifying {}", notifier.name()))?;
                     }
                 }
             }
