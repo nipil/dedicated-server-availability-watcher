@@ -1,4 +1,5 @@
 pub mod ifttt;
+pub mod simple;
 
 use anyhow;
 use anyhow::Context;
@@ -27,7 +28,12 @@ pub trait NotifierFactoryTrait {
 type FactoryFunc = fn() -> Result<Box<dyn NotifierTrait>, LibError>;
 
 /// Builds a reference table of available notifiers.
-static FACTORY: &[(&str, FactoryFunc)] = &[(ifttt::IFTTT_WEBHOOK_NAME, ifttt::WebHook::from_env)];
+static FACTORY: &[(&str, FactoryFunc)] = &[
+    (simple::SIMPLE_GET_NAME, simple::SimpleGet::from_env),
+    (simple::SIMPLE_POST_NAME, simple::SimplePost::from_env),
+    (simple::SIMPLE_PUT_NAME, simple::SimplePut::from_env),
+    (ifttt::IFTTT_WEBHOOK_NAME, ifttt::WebHook::from_env),
+];
 
 /// Trait to help create notifiers.
 pub struct Factory;
