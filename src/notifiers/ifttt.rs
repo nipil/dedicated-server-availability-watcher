@@ -175,7 +175,6 @@ impl NotifierTrait for WebHook {
                 params.insert("value1", &result.provider_name);
                 let value2 = result.available_servers.join(", ");
                 params.insert("value2", &value2);
-                println!("{:?}", result);
                 serde_json::to_string(&params).map_err(|source| LibError::JsonError { source })?
             }
             WebHookVariant::Json => {
