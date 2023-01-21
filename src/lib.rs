@@ -70,4 +70,9 @@ impl ProviderCheckResult {
             available_servers: Vec::<String>::new(),
         }
     }
+
+    // Serializes to json
+    fn to_json(&self) -> Result<String, LibError> {
+        serde_json::to_string(&self).map_err(|source| LibError::JsonError { source })
+    }
 }
