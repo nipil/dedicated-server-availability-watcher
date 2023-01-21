@@ -178,7 +178,7 @@ impl NotifierTrait for WebHook {
                 serde_json::to_string(&params).map_err(|source| LibError::JsonError { source })?
             }
             WebHookVariant::Json => {
-                serde_json::to_string(&result).map_err(|source| LibError::JsonError { source })?
+                result.to_json()?
             }
         };
 
