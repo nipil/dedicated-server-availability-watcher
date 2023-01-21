@@ -101,7 +101,7 @@ impl WebHook {
             self.event,
             match self.variant {
                 WebHookVariant::Value => "",
-                WebHookVariant::Json => "json/",
+                WebHookVariant::Json => "/json",
             },
             self.key
         )
@@ -177,9 +177,7 @@ impl NotifierTrait for WebHook {
                 params.insert("value2", &value2);
                 serde_json::to_string(&params).map_err(|source| LibError::JsonError { source })?
             }
-            WebHookVariant::Json => {
-                result.to_json()?
-            }
+            WebHookVariant::Json => result.to_json()?,
         };
 
         let response = self.query(&body)?;
