@@ -39,24 +39,33 @@ pub trait ProviderFactoryTrait {
     fn from_env() -> Result<Box<dyn ProviderTrait>, LibError>;
 }
 
-// TODO: extract the vec! and the match into a hashmap holding closures
-// that way there is a single source of truth for notifiers
+/// Defines the expected behaviour for building providers.
+type FactoryFunc = fn() -> Result<Box<dyn ProviderTrait>, LibError>;
+
+/// Builds a reference table of available providers.
+static FACTORY: &[(&str, FactoryFunc)] = &[(ovh::OVH_NAME, ovh::Ovh::from_env)];
+
+/// Trait to help create providers
 pub struct Factory;
 
+/// Global provider factory, based on the reference table
 impl Factory {
-    /// Selects the desired provider type and build it from environment variables.
-    fn from_env_by_name(provider: &str) -> Result<Box<dyn ProviderTrait>, LibError> {
-        match provider {
-            ovh::OVH_NAME => ovh::Ovh::from_env(),
-            _ => Err(LibError::UnknownProvider {
+    /// Selects the desired providers type and build it from environment variables.
+    pub fn from_env_by_name(provider: &str) -> Result<Box<dyn ProviderTrait>, LibError> {
+        let (_, factory) = FACTORY
+            .iter()
+            .find(|(name, _)| *name == provider)
+            .ok_or_else(|| LibError::UnknownProvider {
                 provider: provider.to_string(),
-            }),
-        }
+            })?;
+        factory()
     }
 
-    /// Lists all known provider types.
-    fn list_available() -> Vec<&'static str> {
-        vec![ovh::OVH_NAME]
+    /// Provides a list of all known provider types.
+    pub fn get_available() -> Vec<&'static str> {
+        let mut names: Vec<&'static str> = FACTORY.iter().map(|&(name, _)| name).collect();
+        names.sort();
+        names
     }
 }
 
@@ -67,10 +76,10 @@ impl Factory {
 pub struct Runner;
 
 impl Runner {
-    /// Prints all available notifiers.
+    /// Prints all available providers.
     pub fn run_list() -> anyhow::Result<()> {
         println!("Available providers:");
-        for provider in Factory::list_available().iter() {
+        for provider in Factory::get_available().iter() {
             println!("- {}", provider.green());
         }
         Ok(())
