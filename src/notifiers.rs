@@ -23,25 +23,33 @@ pub trait NotifierFactoryTrait {
     fn from_env() -> Result<Box<dyn NotifierTrait>, LibError>;
 }
 
-/// Trait to help create notifiers
+/// Defines the expected behaviour for building notifiers.
+type FactoryFunc = fn() -> Result<Box<dyn NotifierTrait>, LibError>;
+
+/// Builds a reference table of available notifiers.
+static FACTORY: &[(&str, FactoryFunc)] = &[(ifttt::IFTTT_WEBHOOK_NAME, ifttt::WebHook::from_env)];
+
+/// Trait to help create notifiers.
 pub struct Factory;
 
-// TODO: extract the vec! and the match into a hashmap holding closures
-// that way there is a single source of truth for notifiers
+/// Global notifier factory, based on the reference table
 impl Factory {
     /// Selects the desired notifier type and build it from environment variables.
     pub fn from_env_by_name(notifier: &str) -> Result<Box<dyn NotifierTrait>, LibError> {
-        match notifier {
-            ifttt::IFTTT_WEBHOOK_NAME => ifttt::WebHook::from_env(),
-            _ => Err(LibError::UnknownNotifier {
+        let (_, factory) = FACTORY
+            .iter()
+            .find(|(name, _)| *name == notifier)
+            .ok_or_else(|| LibError::UnknownNotifier {
                 notifier: notifier.to_string(),
-            }),
-        }
+            })?;
+        factory()
     }
 
-    /// Lists all known notifier types.
-    pub fn list_available() -> Vec<&'static str> {
-        vec![ifttt::IFTTT_WEBHOOK_NAME]
+    /// Provides a list of all known notifier types.
+    pub fn get_available() -> Vec<&'static str> {
+        let mut names: Vec<&'static str> = FACTORY.iter().map(|&(name, _)| name).collect();
+        names.sort();
+        names
     }
 }
 
@@ -55,7 +63,7 @@ impl Runner {
     /// Prints all available notifiers.
     pub fn run_list() -> anyhow::Result<()> {
         println!("Available notifiers:");
-        for notifier in Factory::list_available().iter() {
+        for notifier in Factory::get_available().iter() {
             println!("- {}", notifier.green());
         }
         Ok(())
