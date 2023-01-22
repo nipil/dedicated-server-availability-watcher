@@ -31,15 +31,6 @@ struct IftttApiError {
     errors: Vec<IftttApiErrorMessage>,
 }
 
-/// Builds dummy results for testing
-fn get_dummy_provider_check_result() -> ProviderCheckResult {
-    let mut result = ProviderCheckResult::new("test_provider");
-    result
-        .available_servers
-        .extend(vec!["foo".into(), "bar".into(), "baz".into()]);
-    result
-}
-
 /// Holds the configuration for the API call
 struct WebHookParameters {
     event: String,
@@ -161,7 +152,7 @@ impl NotifierTrait for WebHookJson {
 
     /// Tests by sending a notification with dummy values.
     fn test(&self) -> Result<(), LibError> {
-        self.notify(&get_dummy_provider_check_result())
+        self.notify(&ProviderCheckResult::get_dummy())
     }
 }
 
@@ -221,6 +212,6 @@ impl NotifierTrait for WebHookValues {
 
     /// Tests by sending a notification with dummy values.
     fn test(&self) -> Result<(), LibError> {
-        self.notify(&get_dummy_provider_check_result())
+        self.notify(&ProviderCheckResult::get_dummy())
     }
 }

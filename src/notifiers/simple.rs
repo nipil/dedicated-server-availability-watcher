@@ -20,15 +20,6 @@ const ENV_SIMPLE_URL: &str = "SIMPLE_URL";
 const ENV_SIMPLE_GET_PARAM_NAME_PROVIDER: &str = "SIMPLE_GET_PARAM_NAME_PROVIDER";
 const ENV_SIMPLE_GET_PARAM_NAME_SERVERS: &str = "SIMPLE_GET_PARAM_NAME_SERVERS";
 
-/// Utility function to builds sample check result data
-fn build_test_result() -> ProviderCheckResult {
-    let mut test_result = ProviderCheckResult::new("test_provider");
-    test_result
-        .available_servers
-        .extend(vec!["foo".into(), "bar".into(), "baz".into()]);
-    test_result
-}
-
 /// Utility function to handle the execution of the request
 fn send_request(builder: RequestBuilder, notifier_name: &str) -> Result<(), LibError> {
     let response = builder
@@ -102,7 +93,7 @@ impl NotifierTrait for SimpleGet {
 
     /// Tests by sending a notification with dummy values.
     fn test(&self) -> Result<(), LibError> {
-        self.notify(&build_test_result())
+        self.notify(&ProviderCheckResult::get_dummy())
     }
 }
 
@@ -135,7 +126,7 @@ impl NotifierTrait for SimplePost {
 
     /// Tests by sending a notification with dummy values.
     fn test(&self) -> Result<(), LibError> {
-        self.notify(&build_test_result())
+        self.notify(&ProviderCheckResult::get_dummy())
     }
 }
 
@@ -168,6 +159,6 @@ impl NotifierTrait for SimplePut {
 
     /// Tests by sending a notification with dummy values.
     fn test(&self) -> Result<(), LibError> {
-        self.notify(&build_test_result())
+        self.notify(&ProviderCheckResult::get_dummy())
     }
 }

@@ -71,6 +71,17 @@ impl ProviderCheckResult {
         }
     }
 
+    /// Builds an instance with dummy values for testing
+    fn get_dummy() -> ProviderCheckResult {
+        let mut result = ProviderCheckResult::new("dummy_provider");
+        result.available_servers.extend(vec![
+            "foo_server".into(),
+            "bar_server".into(),
+            "baz_server".into(),
+        ]);
+        result
+    }
+
     // Serializes to json
     fn to_json(&self) -> Result<String, LibError> {
         serde_json::to_string(&self).map_err(|source| LibError::JsonError { source })
