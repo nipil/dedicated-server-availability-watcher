@@ -7,13 +7,11 @@ use crate::{LibError, ProviderCheckResult};
 
 use super::{NotifierFactoryTrait, NotifierTrait};
 
-// IFTTT WEBHOOK implementation
+// IFTTT WEBHOOK implementations
 
-/// Common name to identify the provider
-pub const IFTTT_WEBHOOK_NAME: &str = "ifttt-webhook";
-
-/// Common environment variable to select the webhook input variant.
-const ENV_NAME_IFTTT_WEBHOOK_VARIANT: &str = "IFTTT_WEBHOOK_VARIANT";
+/// Names to identify the providers
+pub const IFTTT_WEBHOOK_JSON_NAME: &str = "ifttt-webhook-json";
+pub const IFTTT_WEBHOOK_VALUES_NAME: &str = "ifttt-webhook-values";
 
 /// Common environment variable to select the webhook event.
 const ENV_NAME_IFTTT_WEBHOOK_EVENT: &str = "IFTTT_WEBHOOK_EVENT";
@@ -33,34 +31,31 @@ struct IftttApiError {
     errors: Vec<IftttApiErrorMessage>,
 }
 
-/// Variant selecting the structure of the API input.
-enum WebHookVariant {
-    Value,
-    Json,
+/// Builds dummy results for testing
+fn get_dummy_provider_check_result() -> ProviderCheckResult {
+    let mut result = ProviderCheckResult::new("test_provider");
+    result
+        .available_servers
+        .extend(vec!["foo".into(), "bar".into(), "baz".into()]);
+    result
 }
 
-/// Holds the user credentials and event identifier used with the API.
-pub struct WebHook {
-    variant: WebHookVariant,
+/// Holds the configuration for the API call
+struct WebHookParameters {
     event: String,
     key: String,
 }
 
-impl WebHook {
-    /// Builds a new instance.
-    fn new(variant: &str, event: &str, key: &str) -> Result<Self, LibError> {
-        let variant = variant.trim();
-        let variant = match variant {
-            "value" => WebHookVariant::Value,
-            "json" => WebHookVariant::Json,
-            _ => {
-                return Err(LibError::ValueError {
-                    name: "ifttt webhook variant".into(),
-                    value: variant.into(),
-                });
-            }
-        };
+impl WebHookParameters {
+    /// Builds an instance from environment variables.
+    fn from_env() -> Result<Self, LibError> {
+        let event = crate::get_env_var(ENV_NAME_IFTTT_WEBHOOK_EVENT)?;
+        let key = crate::get_env_var(ENV_NAME_IFTTT_WEBHOOK_KEY)?;
+        Ok(Self::new(&event, &key)?)
+    }
 
+    /// Builds a new instance, attempting to sanitize inputs
+    fn new(event: &str, key: &str) -> Result<Self, LibError> {
         // Could not sanitize IFTTT input better, as they don't even follow their own spec:
         // webhook even says to use only letters, numbers and underscored, but it actually
         // allows - and # ... So i do not even try to sanitize.
@@ -83,113 +78,149 @@ impl WebHook {
             });
         }
 
-        Ok(WebHook {
-            event,
-            key,
-            variant,
-        })
+        Ok(Self { event, key })
+    }
+}
+
+/// Posts a request and handle Ifttt-Webhook specific errors
+fn post(url: &str, body: &str) -> Result<Response, LibError> {
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .post(url)
+        .body(body.to_string())
+        .send()
+        .map_err(|source| LibError::RequestError { source })?;
+
+    if response.status().is_success() {
+        return Ok(response);
     }
 
-    /// Builds ifttt URL according to selected variant.
-    fn get_url(&self) -> String {
-        format!(
-            // Common URL to send queries to IFTTT webhook
-            // - the first placeholder is for the event name
-            // - the second placeholder is for the variant (empty or `/json`)
-            // - the third placeholder is for the user's key
-            "https://maker.ifttt.com/trigger/{}{}/with/key/{}",
-            self.event,
-            match self.variant {
-                WebHookVariant::Value => "",
-                WebHookVariant::Json => "/json",
-            },
-            self.key
-        )
-    }
-
-    /// Sends the actual API request.
-    fn query(&self, body: &str) -> Result<Response, LibError> {
-        let url = self.get_url();
-        let client = reqwest::blocking::Client::new();
-        let response = client
-            .post(url)
-            .body(body.to_string())
-            .send()
+    // Handles known errors.
+    if response.status().is_client_error() {
+        let response: IftttApiError = response
+            .json()
             .map_err(|source| LibError::RequestError { source })?;
 
-        if response.status().is_success() {
-            return Ok(response);
-        }
+        let messages = response
+            .errors
+            .iter()
+            .map(|e| e.message.clone())
+            .collect::<Vec<String>>()
+            .join(" / ");
 
-        // Handles known errors.
-        if response.status().is_client_error() {
-            let response: IftttApiError = response
-                .json()
-                .map_err(|source| LibError::RequestError { source })?;
-
-            let messages = response
-                .errors
-                .iter()
-                .map(|e| e.message.clone())
-                .collect::<Vec<String>>()
-                .join(" / ");
-
-            return Err(LibError::ApiError {
-                message: format!("Error during IFTTT-WEBHOOK query: {}", messages),
-            });
-        }
-
-        // Unhandled unknown errors.
         return Err(LibError::ApiError {
-            message: "Unknown IFTTT-WEBHOOK error".to_string(),
+            message: format!("Error during IFTTT-WEBHOOK query: {}", messages),
         });
     }
+
+    // Unhandled unknown errors.
+    return Err(LibError::ApiError {
+        message: "Unknown IFTTT-WEBHOOK error".to_string(),
+    });
 }
 
-impl NotifierFactoryTrait for WebHook {
-    /// Builds a WebHook notifier from environment variables.
-    fn from_env() -> Result<Box<dyn NotifierTrait>, LibError> {
-        let variant = crate::get_env_var(ENV_NAME_IFTTT_WEBHOOK_VARIANT)?;
-        let event = crate::get_env_var(ENV_NAME_IFTTT_WEBHOOK_EVENT)?;
-        let key = crate::get_env_var(ENV_NAME_IFTTT_WEBHOOK_KEY)?;
-        Ok(Box::new(WebHook::new(&variant, &event, &key)?))
+/// Holds the user credentials and event identifier used with the API.
+pub struct WebHookJson {
+    url: String,
+}
+
+impl WebHookJson {
+    /// Create an instance.
+    fn new(parameters: &WebHookParameters) -> Self {
+        let url = format!(
+            // Builds ifttt 'json' URL.
+            // - the first placeholder is for the event name
+            // - the second placeholder is for the user's key
+            "https://maker.ifttt.com/trigger/{}/json/with/key/{}",
+            parameters.event, parameters.key
+        );
+        Self { url }
     }
 }
 
-impl NotifierTrait for WebHook {
+impl NotifierFactoryTrait for WebHookJson {
+    /// Builds a WebHook 'json' notifier from environment variables.
+    fn from_env() -> Result<Box<dyn NotifierTrait>, LibError> {
+        let parameters = WebHookParameters::from_env()?;
+        Ok(Box::new(Self::new(&parameters)))
+    }
+}
+
+impl NotifierTrait for WebHookJson {
     /// Gets the actual name of the notifier.
     fn name(&self) -> &'static str {
-        return IFTTT_WEBHOOK_NAME;
+        return IFTTT_WEBHOOK_JSON_NAME;
     }
 
     /// Sends an notification using the provided data.
     fn notify(&self, result: &ProviderCheckResult) -> Result<(), LibError> {
-        // this is outside the match so that it lives beyond
-        // the inner statement and can be borrowed by query
-        let joined = result.available_servers.join(", ");
-
-        // handles variant
-        let body = match self.variant {
-            WebHookVariant::Value => {
-                let mut params = HashMap::new();
-                params.insert("value1", &result.provider_name);
-                let value2 = result.available_servers.join(", ");
-                params.insert("value2", &value2);
-                serde_json::to_string(&params).map_err(|source| LibError::JsonError { source })?
-            }
-            WebHookVariant::Json => result.to_json()?,
-        };
-
-        let response = self.query(&body)?;
+        let body = result.to_json()?;
+        let response = post(&self.url, &body)?;
         Ok(())
     }
 
     /// Tests by sending a notification with dummy values.
     fn test(&self) -> Result<(), LibError> {
-        let mut test_result = ProviderCheckResult::new("test_provider");
-        test_result
-            .available_servers
-            .extend(vec!["foo".into(), "bar".into(), "baz".into()]);
-        self.notify(&test_result)
+        self.notify(&get_dummy_provider_check_result())
+    }
+}
+
+/// Holds the user credentials and event identifier used with the API.
+pub struct WebHookValues {
+    url: String,
+}
+
+impl WebHookValues {
+    /// Create an instance.
+    fn new(parameters: &WebHookParameters) -> Self {
+        let url = format!(
+            // Builds ifttt 'value' URL.
+            // - the first placeholder is for the event name
+            // - the second placeholder is for the user's key
+            "https://maker.ifttt.com/trigger/{}/with/key/{}",
+            parameters.event, parameters.key
+        );
+        Self { url }
+    }
+
+    /// Builds a POST body from query parameters
+    fn build_body(
+        &self,
+        provider_tag: &str,
+        server_tag: &str,
+        result: &ProviderCheckResult,
+    ) -> Result<String, LibError> {
+        let joined = result.available_servers.join(",");
+        let mut params = HashMap::new();
+        params.insert(provider_tag, &result.provider_name);
+        params.insert(server_tag, &joined);
+        serde_json::to_string(&params).map_err(|source| LibError::JsonError { source })
+    }
+}
+
+impl NotifierFactoryTrait for WebHookValues {
+    /// Builds a WebHook 'values' notifier from environment variables.
+    fn from_env() -> Result<Box<dyn NotifierTrait>, LibError> {
+        let parameters = WebHookParameters::from_env()?;
+        Ok(Box::new(Self::new(&parameters)))
+    }
+}
+
+impl NotifierTrait for WebHookValues {
+    /// Gets the actual name of the notifier.
+    fn name(&self) -> &'static str {
+        return IFTTT_WEBHOOK_VALUES_NAME;
+    }
+
+    /// Sends an notification using the provided data.
+    fn notify(&self, result: &ProviderCheckResult) -> Result<(), LibError> {
+        let body = self.build_body("value1", "value2", result)?;
+        let response = post(&self.url, &body)?;
+        Ok(())
+    }
+
+    /// Tests by sending a notification with dummy values.
+    fn test(&self) -> Result<(), LibError> {
+        self.notify(&get_dummy_provider_check_result())
     }
 }

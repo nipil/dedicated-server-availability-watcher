@@ -32,7 +32,11 @@ static FACTORY: &[(&str, FactoryFunc)] = &[
     (simple::SIMPLE_GET_NAME, simple::SimpleGet::from_env),
     (simple::SIMPLE_POST_NAME, simple::SimplePost::from_env),
     (simple::SIMPLE_PUT_NAME, simple::SimplePut::from_env),
-    (ifttt::IFTTT_WEBHOOK_NAME, ifttt::WebHook::from_env),
+    (ifttt::IFTTT_WEBHOOK_JSON_NAME, ifttt::WebHookJson::from_env),
+    (
+        ifttt::IFTTT_WEBHOOK_VALUES_NAME,
+        ifttt::WebHookValues::from_env,
+    ),
 ];
 
 /// Trait to help create notifiers.
