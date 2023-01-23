@@ -46,12 +46,14 @@ pub enum LibError {
     UnknownProvider { provider: String },
 }
 
-/// Utility function to get an environment variable by name.
+/// Utility function to get an environment variable by name and trim it
 pub fn get_env_var(name: &str) -> Result<String, LibError> {
-    env::var(name).map_err(|source| LibError::EnvError {
-        name: name.to_string(),
-        source,
-    })
+    env::var(name)
+        .map(|text| text.trim().to_string())
+        .map_err(|source| LibError::EnvError {
+            name: name.to_string(),
+            source,
+        })
 }
 
 /// ProviderCheckResult holds the data between providers and notifiers :
