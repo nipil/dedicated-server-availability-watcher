@@ -70,7 +70,7 @@ impl NotifierFactoryTrait for SimpleGet {
 impl SimpleGet {
     /// Builds the query parameter from the structure's data
     fn build_query_parameters(&self, result: &ProviderCheckResult) -> HashMap<&String, String> {
-        let joined = result.available_servers.join(", ");
+        let joined = result.available_servers.join(",");
         let mut params = HashMap::new();
         params.insert(&self.param_provider, result.provider_name.clone());
         params.insert(&self.param_servers, joined);
