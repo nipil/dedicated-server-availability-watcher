@@ -79,6 +79,7 @@ trait WebHookPoster {
         let client = reqwest::blocking::Client::new();
         let response = client
             .post(url)
+            .header("Content-Type", "application/json")
             .body(body.to_string())
             .send()
             .map_err(|source| LibError::RequestError { source })?;
