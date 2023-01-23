@@ -73,41 +73,43 @@ impl WebHookParameters {
     }
 }
 
-/// Posts a request and handle Ifttt-Webhook specific errors
-fn post(url: &str, body: &str) -> Result<Response, LibError> {
-    let client = reqwest::blocking::Client::new();
-    let response = client
-        .post(url)
-        .body(body.to_string())
-        .send()
-        .map_err(|source| LibError::RequestError { source })?;
-
-    if response.status().is_success() {
-        return Ok(response);
-    }
-
-    // Handles known errors.
-    if response.status().is_client_error() {
-        let response: IftttApiError = response
-            .json()
+trait WebHookPoster {
+    /// Posts a request and handle Ifttt-Webhook specific errors
+    fn post(url: &str, body: &str) -> Result<Response, LibError> {
+        let client = reqwest::blocking::Client::new();
+        let response = client
+            .post(url)
+            .body(body.to_string())
+            .send()
             .map_err(|source| LibError::RequestError { source })?;
 
-        let messages = response
-            .errors
-            .iter()
-            .map(|e| e.message.clone())
-            .collect::<Vec<String>>()
-            .join(" / ");
+        if response.status().is_success() {
+            return Ok(response);
+        }
 
+        // Handles known errors.
+        if response.status().is_client_error() {
+            let response: IftttApiError = response
+                .json()
+                .map_err(|source| LibError::RequestError { source })?;
+
+            let messages = response
+                .errors
+                .iter()
+                .map(|e| e.message.clone())
+                .collect::<Vec<String>>()
+                .join(" / ");
+
+            return Err(LibError::ApiError {
+                message: format!("Error during IFTTT-WEBHOOK query: {}", messages),
+            });
+        }
+
+        // Unhandled unknown errors.
         return Err(LibError::ApiError {
-            message: format!("Error during IFTTT-WEBHOOK query: {}", messages),
+            message: "Unknown IFTTT-WEBHOOK error".to_string(),
         });
     }
-
-    // Unhandled unknown errors.
-    return Err(LibError::ApiError {
-        message: "Unknown IFTTT-WEBHOOK error".to_string(),
-    });
 }
 
 /// Holds the user credentials and event identifier used with the API.
@@ -146,7 +148,7 @@ impl NotifierTrait for WebHookJson {
     /// Sends an notification using the provided data.
     fn notify(&self, result: &ProviderCheckResult) -> Result<(), LibError> {
         let body = result.to_json()?;
-        let response = post(&self.url, &body)?;
+        let response = Self::post(&self.url, &body)?;
         Ok(())
     }
 
@@ -155,6 +157,8 @@ impl NotifierTrait for WebHookJson {
         self.notify(&ProviderCheckResult::get_dummy())
     }
 }
+
+impl WebHookPoster for WebHookJson {}
 
 /// Holds the user credentials and event identifier used with the API.
 pub struct WebHookValues {
@@ -206,7 +210,7 @@ impl NotifierTrait for WebHookValues {
     /// Sends an notification using the provided data.
     fn notify(&self, result: &ProviderCheckResult) -> Result<(), LibError> {
         let body = self.build_body("value1", "value2", result)?;
-        let response = post(&self.url, &body)?;
+        let response = Self::post(&self.url, &body)?;
         Ok(())
     }
 
@@ -215,3 +219,5 @@ impl NotifierTrait for WebHookValues {
         self.notify(&ProviderCheckResult::get_dummy())
     }
 }
+
+impl WebHookPoster for WebHookValues {}
