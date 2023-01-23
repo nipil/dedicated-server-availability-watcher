@@ -9,9 +9,9 @@ use super::{NotifierFactoryTrait, NotifierTrait};
 // SIMPLE implementation (get, post, put)
 
 /// Common name to identify the provider
-pub const SIMPLE_GET_NAME: &str = "custom-get";
-pub const SIMPLE_POST_NAME: &str = "custom-post";
-pub const SIMPLE_PUT_NAME: &str = "custom-put";
+pub const SIMPLE_GET_NAME: &str = "simple-get";
+pub const SIMPLE_POST_NAME: &str = "simple-post";
+pub const SIMPLE_PUT_NAME: &str = "simple-put";
 
 /// Common environment variable to select the custom URL.
 const ENV_SIMPLE_URL: &str = "SIMPLE_URL";
