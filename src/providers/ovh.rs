@@ -42,7 +42,6 @@ impl OvhDedicatedServerInformation {
 /// Used for API result deserialisation.
 #[derive(Deserialize)]
 struct OvhDedicatedServerDatacenterAvailability {
-    datacenter: String,
     availability: String,
 }
 

@@ -149,7 +149,8 @@ impl NotifierTrait for WebHookJson {
     /// Sends an notification using the provided data.
     fn notify(&self, result: &ProviderCheckResult) -> Result<(), LibError> {
         let body = result.to_json()?;
-        let response = Self::post(&self.url, &body)?;
+        // we are not interested in the actual payload of the reply
+        Self::post(&self.url, &body)?;
         Ok(())
     }
 
@@ -211,7 +212,8 @@ impl NotifierTrait for WebHookValues {
     /// Sends an notification using the provided data.
     fn notify(&self, result: &ProviderCheckResult) -> Result<(), LibError> {
         let body = self.build_body("value1", "value2", result)?;
-        let response = Self::post(&self.url, &body)?;
+        // we are not interested in the actual payload of the reply
+        Self::post(&self.url, &body)?;
         Ok(())
     }
 
