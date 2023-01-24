@@ -1,4 +1,5 @@
 pub mod ovh;
+pub mod scaleway;
 
 use std::{thread, time};
 
@@ -43,7 +44,10 @@ pub trait ProviderFactoryTrait {
 type FactoryFunc = fn() -> Result<Box<dyn ProviderTrait>, LibError>;
 
 /// Builds a reference table of available providers.
-static FACTORY: &[(&str, FactoryFunc)] = &[(ovh::OVH_NAME, ovh::Ovh::from_env)];
+static FACTORY: &[(&str, FactoryFunc)] = &[
+    (ovh::OVH_NAME, ovh::Ovh::from_env),
+    (scaleway::SCALEWAY_NAME, scaleway::Scaleway::from_env),
+];
 
 /// Trait to help create providers
 pub struct Factory;
