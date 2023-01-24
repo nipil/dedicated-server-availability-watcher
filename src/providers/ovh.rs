@@ -66,6 +66,7 @@ pub struct Ovh {
 impl Ovh {
     /// Builds a new instance.
     fn new() -> Self {
+        // Do not error if the env var is empty or not present, as it is optional
         let p = env::var(ENV_NAME_OVH_EXCLUDE_DATACENTER)
             .unwrap_or_default()
             .trim()
@@ -77,6 +78,7 @@ impl Ovh {
 
     /// Gets availability for specified server types.
     /// `server`: optionally used to query for a single server type.
+    /// TODO: return a OvhDedicatedServerInformation instead of a response
     fn query_available_servers(&self, server: Option<&str>) -> Result<Response, LibError> {
         let mut query: Vec<(&str, &str)> = Vec::new();
 
@@ -125,7 +127,7 @@ impl ProviderTrait for Ovh {
         return OVH_NAME;
     }
 
-    /// Sends an notification using the provided data.
+    /// Collects provider inventory.
     fn inventory(&self, all: bool) -> Result<Vec<ServerInfo>, LibError> {
         let response = self.query_available_servers(None)?;
 
