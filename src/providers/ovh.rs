@@ -48,8 +48,7 @@ impl OvhDedicatedServerDatacenterAvailability {
     /// Evaluates availability.
     fn is_available(&self) -> bool {
         match self.availability.as_str() {
-            "unavailable" => return false,
-            "unknown" => return false,
+            "unavailable" | "unknown" => return false,
             _ => return true,
         }
     }
