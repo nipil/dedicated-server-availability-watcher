@@ -155,11 +155,11 @@ impl ProviderTrait for Ovh {
 
     /// Collects provider inventory.
     fn inventory(&self, all: bool) -> Result<Vec<ServerInfo>, LibError> {
-        let response = self.api_get_dedicated_server_datacenter_availabilities(None)?;
+        let results = self.api_get_dedicated_server_datacenter_availabilities(None)?;
 
         let mut infos = Vec::new();
 
-        for server in response.iter() {
+        for server in results.iter() {
             //skip unavailable except if requested
             if !server.is_available() && !all {
                 continue;
@@ -173,20 +173,20 @@ impl ProviderTrait for Ovh {
 
     /// Checks provider for the availability of a given server type.
     fn check(&self, server: &str) -> Result<bool, LibError> {
-        let response = self.api_get_dedicated_server_datacenter_availabilities(Some(server))?;
+        let results = self.api_get_dedicated_server_datacenter_availabilities(Some(server))?;
 
-        if response.is_empty() {
+        if results.is_empty() {
             return Err(LibError::UnknownServer {
                 server: server.to_string(),
             });
         }
 
-        if response.len() > 1 {
+        if results.len() > 1 {
             return Err(LibError::ApiError {
                 message: format!("Multiple references found for server {server}"),
             });
         }
 
-        Ok(response[0].is_available())
+        Ok(results[0].is_available())
     }
 }
