@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use reqwest::blocking::Response;
+use http::{Method, StatusCode};
+use reqwest::blocking::{Client, RequestBuilder, Response};
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -97,22 +98,33 @@ impl Scaleway {
         Ok(Self { secret_key, zones })
     }
 
-    /// Executes authenticated queries
-    fn get_api_authenticated(&self, url: &str) -> Result<Response, LibError> {
-        let response = reqwest::blocking::Client::new()
-            .get(url)
+    /// Wrapper for automatic handling of authentication
+    fn create_authenticated_request_builder(&self, method: Method, url: &str) -> RequestBuilder {
+        Client::new()
+            .request(method, url)
             .header("X-Auth-Token", &self.secret_key)
+    }
+
+    /// Fallback error handler for queries
+    fn do_error_if_not_successful(response: &Response) -> Result<(), LibError> {
+        if response.status().is_success() {
+            return Ok(());
+        }
+
+        Err(LibError::ApiError {
+            message: format!(
+                "Error during Scaleway baremetal query: code {}",
+                response.status()
+            ),
+        })
+    }
+
+    /// Executes simple authenticated get queries which fails only on transport errors
+    fn get_api_authenticated(&self, url: &str) -> Result<Response, LibError> {
+        let response = self
+            .create_authenticated_request_builder(Method::GET, url)
             .send()
             .map_err(|source| LibError::RequestError { source })?;
-
-        if !response.status().is_success() {
-            return Err(LibError::ApiError {
-                message: format!(
-                    "Error during Scaleway baremetal query: code {}",
-                    response.status()
-                ),
-            });
-        }
 
         Ok(response)
     }
@@ -121,6 +133,9 @@ impl Scaleway {
     fn get_zone_offers(&self, zone: &str) -> Result<ScalewayBaremetalOffers, LibError> {
         let url = format!("https://api.scaleway.com/baremetal/v1/zones/{zone}/offers");
         let response = self.get_api_authenticated(&url)?;
+
+        // fallback error handler
+        Self::do_error_if_not_successful(&response)?;
 
         // reqwest deserialize and check
         response
@@ -162,19 +177,29 @@ impl Scaleway {
         Ok(Vec::from_iter(map.into_values()))
     }
 
-    /// Gets a specific offer in specified zone.
+    /// Gets a specific offer in specified zone
     fn get_zone_offer(
         &self,
         zone: &str,
         offer_id: &str,
-    ) -> Result<ScalewayBaremetalOffer, LibError> {
+    ) -> Result<Option<ScalewayBaremetalOffer>, LibError> {
         let url = format!("https://api.scaleway.com/baremetal/v1/zones/{zone}/offers/{offer_id}");
         let response = self.get_api_authenticated(&url)?;
 
+        // the API returns 404 if 'offer_id' is not found, and we do not want to error out
+        if response.status() == StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+
+        // fallback error handler
+        Self::do_error_if_not_successful(&response)?;
+
         // reqwest deserialize and check
-        response
-            .json::<ScalewayBaremetalOffer>()
-            .map_err(|source| LibError::RequestError { source })
+        Ok(Some(
+            response
+                .json::<ScalewayBaremetalOffer>()
+                .map_err(|source| LibError::RequestError { source })?,
+        ))
     }
 
     /// Gets a specific offer.
@@ -183,13 +208,19 @@ impl Scaleway {
         let mut result: Option<ScalewayBaremetalOffer> = None;
 
         for zone in &self.zones {
-            let offer = self.get_zone_offer(&zone, offer_id)?;
-            // fill result if it was previously empty, so only the first makes an actual clone
-            let info = result.get_or_insert(offer.clone());
-            // if offer availability is 'better' than current value, update it
-            if !info.is_available() && offer.is_available() {
-                info.enable = offer.enable;
-                info.stock = offer.stock;
+            match self.get_zone_offer(&zone, offer_id)? {
+                // skip if we did not find an offer for this id
+                None => continue,
+
+                Some(offer) => {
+                    // fill result if it was previously empty, so only the first makes an actual clone
+                    let info = result.get_or_insert(offer.clone());
+                    // if offer availability is 'better' than current value, update it
+                    if !info.is_available() && offer.is_available() {
+                        info.enable = offer.enable;
+                        info.stock = offer.stock;
+                    }
+                }
             }
         }
 
