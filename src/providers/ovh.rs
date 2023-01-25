@@ -178,7 +178,7 @@ impl ProviderTrait for Ovh {
 
         if response.len() > 1 {
             return Err(LibError::ApiError {
-                message: format!("Multiple references found for server {}", server),
+                message: format!("Multiple references found for server {server}"),
             });
         }
 

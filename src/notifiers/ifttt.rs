@@ -102,7 +102,7 @@ trait WebHookPoster {
                 .join(" / ");
 
             return Err(LibError::ApiError {
-                message: format!("Error during IFTTT-WEBHOOK query: {}", messages),
+                message: format!("Error during IFTTT-WEBHOOK query: {messages}"),
             });
         }
 

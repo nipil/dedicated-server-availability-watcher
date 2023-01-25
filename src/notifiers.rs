@@ -82,10 +82,10 @@ impl Runner {
     /// Tests selected notifier.
     pub fn run_test(name: &str) -> anyhow::Result<()> {
         let notifier = Factory::from_env_by_name(name)
-            .with_context(|| format!("while setting up notifier {}", name))?;
+            .with_context(|| format!("while setting up notifier {name}"))?;
         notifier
             .test()
-            .with_context(|| format!("while testing notifier {}", name))?;
+            .with_context(|| format!("while testing notifier {name}"))?;
         println!("{}", "Notification sent".to_string().green());
         Ok(())
     }

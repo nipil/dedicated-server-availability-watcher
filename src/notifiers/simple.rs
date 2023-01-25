@@ -32,9 +32,8 @@ fn send_request(builder: RequestBuilder, notifier_name: &str) -> Result<(), LibE
         .then_some(())
         .ok_or(LibError::ApiError {
             message: format!(
-                "Error {} while notifying {}: {}",
+                "Error {} while notifying {notifier_name}: {}",
                 response.status().as_str(),
-                notifier_name,
                 response
                     .text()
                     .map_err(|source| LibError::RequestError { source })

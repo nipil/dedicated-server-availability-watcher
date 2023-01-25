@@ -94,12 +94,12 @@ impl Runner {
     /// Set `all` to true to include unavailable server kinds
     pub fn run_inventory(provider_name: &str, all: bool) -> anyhow::Result<()> {
         let provider = Factory::from_env_by_name(provider_name)
-            .with_context(|| format!("while setting up provider {}", provider_name))?;
+            .with_context(|| format!("while setting up provider {provider_name}"))?;
 
         println!("Working...");
         let inventory = provider
             .inventory(all)
-            .with_context(|| format!("while getting inventory for provider {}", provider_name))?;
+            .with_context(|| format!("while getting inventory for provider {provider_name}"))?;
 
         if inventory.is_empty() {
             println!("No servers found");
@@ -136,7 +136,7 @@ impl Runner {
             // FIXME: do not stop on first fail ? Or remove the iteration and delegate it to the caller (but then, should store previous state)
             if provider
                 .check(server)
-                .with_context(|| format!("while checking for server {}", server))?
+                .with_context(|| format!("while checking for server {server}"))?
             {
                 result.available_servers.push(server.clone());
             }
@@ -155,13 +155,13 @@ impl Runner {
     ) -> anyhow::Result<()> {
         // builds the provider
         let provider = &Factory::from_env_by_name(provider_name)
-            .with_context(|| format!("while setting up provider {}", provider_name))?;
+            .with_context(|| format!("while setting up provider {provider_name}"))?;
 
         // initialize notifier if any
         let notifier = &match notifier {
             Some(notifier) => Some(
                 notifiers::Factory::from_env_by_name(notifier)
-                    .with_context(|| format!("while setting up notifier {}", notifier))?,
+                    .with_context(|| format!("while setting up notifier {notifier}"))?,
             ),
             None => None,
         };
@@ -171,7 +171,7 @@ impl Runner {
             // initialize the output structure
             let mut result = ProviderCheckResult::new(provider_name);
             Self::check_servers(provider, servers, &mut result)
-                .with_context(|| format!("while checking provider {}", provider_name))?;
+                .with_context(|| format!("while checking provider {provider_name}"))?;
 
             // Only when a change happens do we consider notifying of the latest result
             // FIXME: need better comparison to detect changes from "A,B" to "A,C" --> sort and store and parse again
