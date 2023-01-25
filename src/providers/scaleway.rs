@@ -60,7 +60,7 @@ impl From<&ScalewayBaremetalOffer> for ServerInfo {
         let storage = offer.disks.iter().map(|disk| disk.capacity).sum::<u64>() / 1000000000;
 
         ServerInfo {
-            reference: format!("({}) {}", offer.id, offer.name),
+            reference: format!("{} ({})", offer.id, offer.name),
             memory: format!("{memory}G"),
             storage: format!("{storage}G"),
             available: offer.is_available(),
