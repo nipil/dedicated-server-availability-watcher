@@ -1,6 +1,5 @@
 use std::env;
 
-use reqwest::blocking::Response;
 use serde::Deserialize;
 
 use crate::LibError;
@@ -99,8 +98,10 @@ impl Ovh {
 
     /// Gets availability for specified server types.
     /// `server`: optionally used to query for a single server type.
-    /// TODO: return a OvhDedicatedServerInformation instead of a response
-    fn query_available_servers(&self, server: Option<&str>) -> Result<Response, LibError> {
+    fn api_get_dedicated_server_datacenter_availabilities(
+        &self,
+        server: Option<&str>,
+    ) -> Result<Vec<OvhDedicatedServerInformation>, LibError> {
         let mut query: Vec<(&str, &str)> = Vec::new();
 
         match &self.excluded_datacenters {
@@ -131,7 +132,11 @@ impl Ovh {
             });
         }
 
-        Ok(response)
+        let results: Vec<OvhDedicatedServerInformation> = response
+            .json()
+            .map_err(|source| LibError::RequestError { source })?;
+
+        Ok(results)
     }
 }
 
@@ -150,11 +155,7 @@ impl ProviderTrait for Ovh {
 
     /// Collects provider inventory.
     fn inventory(&self, all: bool) -> Result<Vec<ServerInfo>, LibError> {
-        let response = self.query_available_servers(None)?;
-
-        let response: Vec<OvhDedicatedServerInformation> = response
-            .json()
-            .map_err(|source| LibError::RequestError { source })?;
+        let response = self.api_get_dedicated_server_datacenter_availabilities(None)?;
 
         let mut infos = Vec::new();
 
@@ -172,11 +173,7 @@ impl ProviderTrait for Ovh {
 
     /// Checks provider for the availability of a given server type.
     fn check(&self, server: &str) -> Result<bool, LibError> {
-        let response = self.query_available_servers(Some(server))?;
-
-        let response: Vec<OvhDedicatedServerInformation> = response
-            .json()
-            .map_err(|source| LibError::RequestError { source })?;
+        let response = self.api_get_dedicated_server_datacenter_availabilities(Some(server))?;
 
         if response.is_empty() {
             return Err(LibError::UnknownServer {
