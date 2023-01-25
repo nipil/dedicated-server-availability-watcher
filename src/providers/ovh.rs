@@ -179,12 +179,14 @@ impl ProviderTrait for Ovh {
             None => Err(LibError::UnknownServer {
                 server: server.to_string(),
             }),
-            Some(_) => results
-                .is_empty()
-                .then_some(true)
-                .ok_or(LibError::ApiError {
-                    message: format!("Multiple references found for server {server}"),
-                }),
+            Some(result) => {
+                results
+                    .is_empty()
+                    .then_some(result.is_available())
+                    .ok_or(LibError::ApiError {
+                        message: format!("Multiple references found for server {server}"),
+                    })
+            }
         }
     }
 }
