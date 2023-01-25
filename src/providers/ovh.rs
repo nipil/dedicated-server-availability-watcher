@@ -56,6 +56,27 @@ impl OvhDedicatedServerDatacenterAvailability {
     }
 }
 
+// I prefer the From trait, as i can pass references
+impl From<&OvhDedicatedServerInformation> for ServerInfo {
+    /// Extracts only interesting information which is common to all providers
+    fn from(info: &OvhDedicatedServerInformation) -> Self {
+        ServerInfo {
+            reference: info.server.clone(),
+            memory: info
+                .memory
+                .as_ref()
+                .unwrap_or(&"N/A".to_string())
+                .to_string(),
+            storage: info
+                .storage
+                .as_ref()
+                .unwrap_or(&"N/A".to_string())
+                .to_string(),
+            available: info.is_available(),
+        }
+    }
+}
+
 /// Gets server inventory and availability.
 pub struct Ovh {
     /// Used to exclude datacenters by their id.
@@ -143,20 +164,7 @@ impl ProviderTrait for Ovh {
                 continue;
             }
 
-            infos.push(ServerInfo {
-                reference: server.server.clone(),
-                memory: server
-                    .memory
-                    .as_ref()
-                    .unwrap_or(&"N/A".to_string())
-                    .to_string(),
-                storage: server
-                    .storage
-                    .as_ref()
-                    .unwrap_or(&"N/A".to_string())
-                    .to_string(),
-                available: server.is_available(),
-            });
+            infos.push(server.into());
         }
 
         Ok(infos)
