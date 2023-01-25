@@ -106,7 +106,7 @@ impl Runner {
             return Ok(());
         }
 
-        println!("Available servers:");
+        println!("Known servers:");
         for item in inventory.iter() {
             match item {
                 info => {
