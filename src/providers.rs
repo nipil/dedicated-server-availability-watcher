@@ -182,6 +182,7 @@ impl Runner {
     /// Checks the given provider for availability of specific server types.
     /// - if periodic check is requested, nothing happens if there is no change
     /// - if a notifier is provided, and there are any available, a notification is sent
+    #[cfg(not(feature = "check_interval"))]
     pub fn run_check(
         provider_name: &str,
         servers: &Vec<String>,
