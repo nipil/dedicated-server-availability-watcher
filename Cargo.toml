@@ -22,3 +22,18 @@ lto = true
 
 # remember to comment before running `cargo bloat --release`
 strip = "symbols"
+
+[features]
+# default features, add names here to build them by default
+default = []
+
+# add features to "experimental" so they can be compiles in
+# if someone wants to test them before they are either kept or trashed
+experimental = ["check_interval"]
+# experimental features
+check_interval = []
+
+# add featurs to "deprecated" so they can be compiles back in
+# if someone wants them before code is purged
+deprecated = []
+# add deprecated features here

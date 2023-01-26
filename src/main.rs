@@ -55,6 +55,7 @@ enum ProviderCommands {
         notifier: Option<String>,
 
         /// Check periodically (in seconds)
+        #[cfg(feature = "check_interval")]
         #[arg(short, long)]
         interval: Option<u16>,
     },
@@ -98,12 +99,20 @@ fn main() -> Result<()> {
                     providers::Runner::run_inventory(provider, *all)?;
                 }
 
+                #[cfg(not(feature = "check_interval"))]
+                ProviderCommands::Check {
+                    provider,
+                    servers,
+                    notifier,
+                } => providers::Runner::run_check(provider, servers, notifier)?,
+
+                #[cfg(feature = "check_interval")]
                 ProviderCommands::Check {
                     provider,
                     servers,
                     notifier,
                     interval,
-                } => providers::Runner::run_check(provider, servers, notifier, interval)?,
+                } => providers::Runner::run_check_interval(provider, servers, notifier, interval)?,
             },
         },
     }

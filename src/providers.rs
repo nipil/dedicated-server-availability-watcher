@@ -9,6 +9,7 @@ use anyhow::Context;
 use colored::Colorize;
 
 use crate::notifiers;
+use crate::notifiers::NotifierTrait;
 use crate::LibError;
 use crate::ProviderCheckResult;
 
@@ -89,6 +90,41 @@ impl Runner {
         Ok(())
     }
 
+    /// Builds an actual notifier from a notifier name
+    fn build_provider(name: &str) -> anyhow::Result<Box<dyn ProviderTrait>> {
+        Ok(Factory::from_env_by_name(name)
+            .with_context(|| format!("while setting up provider {name}"))?)
+    }
+
+    /// Builds an actual notifier from a notifier name
+    fn build_notifier(name: &Option<String>) -> anyhow::Result<Option<Box<dyn NotifierTrait>>> {
+        Ok(match name {
+            None => None,
+            Some(notifier) => Some(
+                notifiers::Factory::from_env_by_name(notifier)
+                    .with_context(|| format!("while setting up notifier {notifier}"))?,
+            ),
+        })
+    }
+
+    /// Builds an actual notifier from a notifier name
+    fn notify_result(
+        notifier: &Option<Box<dyn NotifierTrait>>,
+        result: &ProviderCheckResult,
+    ) -> anyhow::Result<()> {
+        match notifier {
+            None => {
+                println!("{}", result.available_servers.join(", ").green());
+            }
+            Some(notifier) => {
+                notifier.notify(&result).with_context(|| {
+                    format!("while notifying results through {}", notifier.name())
+                })?;
+            }
+        }
+        Ok(())
+    }
+
     /// Prints a list of every kind of server known to the provider.
     /// By default, does not include servers which are out of stock
     /// Set `all` to true to include unavailable server kinds
@@ -150,59 +186,51 @@ impl Runner {
     pub fn run_check(
         provider_name: &str,
         servers: &Vec<String>,
-        notifier: &Option<String>,
+        notifier_name: &Option<String>,
+    ) -> anyhow::Result<()> {
+        let provider = Self::build_provider(provider_name)?;
+        let notifier = Self::build_notifier(notifier_name)?;
+        let mut result = ProviderCheckResult::new(provider_name);
+
+        Self::check_servers(&provider, servers, &mut result)
+            .with_context(|| format!("while checking provider {provider_name}"))?;
+
+        Self::notify_result(&notifier, &result)?;
+        Ok(())
+    }
+
+    /// Checks the given provider for availability of specific server types.
+    /// - if periodic check is requested, nothing happens if there is no change
+    /// - if a notifier is provided, and there are any available, a notification is sent
+    #[cfg(feature = "check_interval")]
+    pub fn run_check_interval(
+        provider_name: &str,
+        servers: &Vec<String>,
+        notifier_name: &Option<String>,
         interval: &Option<u16>,
     ) -> anyhow::Result<()> {
-        // builds the provider
-        let provider = &Factory::from_env_by_name(provider_name)
-            .with_context(|| format!("while setting up provider {provider_name}"))?;
+        let provider = Self::build_provider(provider_name)?;
+        let notifier = Self::build_notifier(notifier_name)?;
+        let mut last = ProviderCheckResult::new(provider_name);
 
-        // initialize notifier if any
-        let notifier = &match notifier {
-            Some(notifier) => Some(
-                notifiers::Factory::from_env_by_name(notifier)
-                    .with_context(|| format!("while setting up notifier {notifier}"))?,
-            ),
-            None => None,
-        };
-
-        let mut last_count = 0;
         loop {
-            // initialize the output structure
-            let mut result = ProviderCheckResult::new(provider_name);
-            Self::check_servers(provider, servers, &mut result)
+            // populate results
+            let mut current = ProviderCheckResult::new(provider_name);
+            Self::check_servers(&provider, servers, &mut current)
                 .with_context(|| format!("while checking provider {provider_name}"))?;
 
-            // Only when a change happens do we consider notifying of the latest result
-            // FIXME: need better comparison to detect changes from "A,B" to "A,C" --> sort and store and parse again
-            if result.available_servers.len() != last_count {
-                last_count = result.available_servers.len();
-
-                // notify result if necessary
-                match notifier {
-                    None => {
-                        println!("{}", result.available_servers.join(", ").green());
-                    }
-                    Some(notifier) => {
-                        notifier
-                            .notify(&result)
-                            .with_context(|| format!("while notifying {}", notifier.name()))?;
-                    }
-                }
+            // compare, notify and age result
+            if current != last {
+                Self::notify_result(&notifier, &current)?;
+                last = current;
             }
 
+            // continue if necessary
             match interval {
-                None => {
-                    // exit if a single check is requested
-                    break;
-                }
-                Some(interval) => {
-                    // otherwise, wait for the specified duration
-                    thread::sleep(time::Duration::from_secs((*interval).into()));
-                }
+                None => break,
+                Some(interval) => thread::sleep(time::Duration::from_secs((*interval).into())),
             }
         }
-
         Ok(())
     }
 }
