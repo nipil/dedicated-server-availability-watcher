@@ -169,7 +169,6 @@ impl Runner {
         result: &mut ProviderCheckResult,
     ) -> anyhow::Result<()> {
         for server in servers.iter() {
-            // FIXME: do not stop on first fail ? Or remove the iteration and delegate it to the caller (but then, should store previous state)
             if provider
                 .check(server)
                 .with_context(|| format!("while checking for server {server}"))?
@@ -213,6 +212,7 @@ impl Runner {
         let notifier = Self::build_notifier(notifier_name)?;
         let mut last = ProviderCheckResult::new(provider_name);
 
+        // FIXME: ignore errors while in loop ?
         loop {
             // populate results
             let mut current = ProviderCheckResult::new(provider_name);
