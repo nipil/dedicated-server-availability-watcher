@@ -14,6 +14,7 @@ pub trait NotifierTrait {
 
     /// Sends a string as notification.
     fn notify(&self, result: &ProviderCheckResult) -> Result<(), LibError>;
+
     /// Does whatever is required to test the notifier.
     fn test(&self) -> Result<(), LibError>;
 }
