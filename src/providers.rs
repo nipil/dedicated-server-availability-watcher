@@ -1,6 +1,7 @@
 pub mod ovh;
 pub mod scaleway;
 
+#[cfg(feature = "check_interval")]
 use std::{thread, time};
 
 use anyhow;
@@ -183,19 +184,19 @@ impl Runner {
     /// - if periodic check is requested, nothing happens if there is no change
     /// - if a notifier is provided, and there are any available, a notification is sent
     #[cfg(not(feature = "check_interval"))]
-    pub fn run_check(
+    pub fn run_check_single(
         provider_name: &str,
         servers: &Vec<String>,
         notifier_name: &Option<String>,
     ) -> anyhow::Result<()> {
         let provider = Self::build_provider(provider_name)?;
         let notifier = Self::build_notifier(notifier_name)?;
-        let mut result = ProviderCheckResult::new(provider_name);
+        let mut latest = ProviderCheckResult::new(provider_name);
 
-        Self::check_servers(&provider, servers, &mut result)
+        Self::check_servers(&provider, servers, &mut latest)
             .with_context(|| format!("while checking provider {provider_name}"))?;
 
-        Self::notify_result(&notifier, &result)?;
+        Self::notify_result(&notifier, &latest)?;
         Ok(())
     }
 

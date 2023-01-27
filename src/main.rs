@@ -104,7 +104,7 @@ fn main() -> Result<()> {
                     provider,
                     servers,
                     notifier,
-                } => providers::Runner::run_check(provider, servers, notifier)?,
+                } => providers::Runner::run_check_single(provider, servers, notifier)?,
 
                 #[cfg(feature = "check_interval")]
                 ProviderCommands::Check {
