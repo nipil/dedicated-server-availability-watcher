@@ -56,16 +56,16 @@ pub fn get_env_var(name: &str) -> Result<String, LibError> {
         })
 }
 
-/// ProviderCheckResult holds the data between providers and notifiers :
+/// CheckResult holds the data between providers and notifiers :
 /// - `provider::check` is the data source
 /// - `notifier::notify` is the data sink
 #[derive(PartialEq, Serialize)]
-pub struct ProviderCheckResult {
+pub struct CheckResult {
     pub provider_name: String,
     pub available_servers: Vec<String>,
 }
 
-impl ProviderCheckResult {
+impl CheckResult {
     fn new(provider_name: &str) -> Self {
         Self {
             provider_name: provider_name.to_string(),
@@ -74,8 +74,8 @@ impl ProviderCheckResult {
     }
 
     /// Builds an instance with dummy values for testing
-    fn get_dummy() -> ProviderCheckResult {
-        let mut result = ProviderCheckResult::new("dummy_provider");
+    fn get_dummy() -> CheckResult {
+        let mut result = CheckResult::new("dummy_provider");
         result.available_servers.extend(vec![
             "foo_server".into(),
             "bar_server".into(),

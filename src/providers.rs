@@ -11,8 +11,8 @@ use colored::Colorize;
 
 use crate::notifiers;
 use crate::notifiers::NotifierTrait;
+use crate::CheckResult;
 use crate::LibError;
-use crate::ProviderCheckResult;
 
 /// Defines the common information returned by `ProviderTrait::inventory()`.
 pub struct ServerInfo {
@@ -101,7 +101,7 @@ impl Runner {
     /// Builds an actual notifier from a notifier name
     fn notify_result(
         notifier: &Option<Box<dyn NotifierTrait>>,
-        result: &ProviderCheckResult,
+        result: &CheckResult,
     ) -> anyhow::Result<()> {
         match notifier {
             None => {
@@ -193,7 +193,7 @@ impl Runner {
     ) -> anyhow::Result<()> {
         let provider = Self::build_provider(provider_name)?;
         let notifier = Self::build_notifier(notifier_name)?;
-        let mut latest = ProviderCheckResult::new(provider_name);
+        let mut latest = CheckResult::new(provider_name);
 
         Self::check_servers(&provider, servers, &mut latest)
             .with_context(|| format!("while checking provider {provider_name}"))?;
@@ -232,7 +232,7 @@ impl<'a> CheckRunner<'a> {
     }
 
     /// Checks the given provider for availability of a specific server type.
-    fn check_servers(&self, result: &mut ProviderCheckResult) -> anyhow::Result<()> {
+    fn check_servers(&self, result: &mut CheckResult) -> anyhow::Result<()> {
         for server in self.servers.iter() {
             if self
                 .provider
@@ -249,7 +249,7 @@ impl<'a> CheckRunner<'a> {
     /// TODO: comparing to the previous state if available? (from disk ?)
     fn check_interval_once(&self) -> anyhow::Result<()> {
         let provider_name = self.provider.name();
-        let mut latest = ProviderCheckResult::new(provider_name);
+        let mut latest = CheckResult::new(provider_name);
         self.check_servers(&mut latest)
             .with_context(|| format!("while checking provider {}", provider_name))?;
         Runner::notify_result(&self.notifier, &latest)
@@ -260,7 +260,7 @@ impl<'a> CheckRunner<'a> {
     #[cfg(feature = "check_interval")]
     fn check_interval_loop(&self, interval: u16) -> anyhow::Result<()> {
         let provider_name = self.provider.name();
-        let mut latest = ProviderCheckResult::new(provider_name);
+        let mut latest = CheckResult::new(provider_name);
 
         let mut first_check = true;
         let mut first_notify = true;
@@ -272,7 +272,7 @@ impl<'a> CheckRunner<'a> {
             }
 
             // compute current state
-            let mut current = ProviderCheckResult::new(provider_name);
+            let mut current = CheckResult::new(provider_name);
             let result = self
                 .check_servers(&mut current)
                 .with_context(|| format!("while checking provider {provider_name}"));

@@ -5,7 +5,7 @@ use anyhow;
 use anyhow::Context;
 use colored::Colorize;
 
-use crate::{LibError, ProviderCheckResult};
+use crate::{CheckResult, LibError};
 
 /// Defines the expected behaviour of every notifier handler.
 pub trait NotifierTrait {
@@ -13,7 +13,7 @@ pub trait NotifierTrait {
     fn name(&self) -> &'static str;
 
     /// Sends a string as notification.
-    fn notify(&self, result: &ProviderCheckResult) -> Result<(), LibError>;
+    fn notify(&self, result: &CheckResult) -> Result<(), LibError>;
 
     /// Does whatever is required to test the notifier.
     fn test(&self) -> Result<(), LibError>;

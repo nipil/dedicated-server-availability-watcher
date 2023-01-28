@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use reqwest::blocking::Response;
 use serde::Deserialize;
 
-use crate::{LibError, ProviderCheckResult};
+use crate::{CheckResult, LibError};
 
 use super::{NotifierFactoryTrait, NotifierTrait};
 
@@ -147,7 +147,7 @@ impl NotifierTrait for WebHookJson {
     }
 
     /// Sends an notification using the provided data.
-    fn notify(&self, result: &ProviderCheckResult) -> Result<(), LibError> {
+    fn notify(&self, result: &CheckResult) -> Result<(), LibError> {
         let body = result.to_json()?;
         // we are not interested in the actual payload of the reply
         Self::post(&self.url, &body)?;
@@ -156,7 +156,7 @@ impl NotifierTrait for WebHookJson {
 
     /// Tests by sending a notification with dummy values.
     fn test(&self) -> Result<(), LibError> {
-        self.notify(&ProviderCheckResult::get_dummy())
+        self.notify(&CheckResult::get_dummy())
     }
 }
 
@@ -185,7 +185,7 @@ impl WebHookValues {
         &self,
         provider_tag: &str,
         server_tag: &str,
-        result: &ProviderCheckResult,
+        result: &CheckResult,
     ) -> Result<String, LibError> {
         let joined = result.available_servers.join(",");
         let mut params = HashMap::new();
@@ -210,7 +210,7 @@ impl NotifierTrait for WebHookValues {
     }
 
     /// Sends an notification using the provided data.
-    fn notify(&self, result: &ProviderCheckResult) -> Result<(), LibError> {
+    fn notify(&self, result: &CheckResult) -> Result<(), LibError> {
         let body = self.build_body("value1", "value2", result)?;
         // we are not interested in the actual payload of the reply
         Self::post(&self.url, &body)?;
@@ -219,7 +219,7 @@ impl NotifierTrait for WebHookValues {
 
     /// Tests by sending a notification with dummy values.
     fn test(&self) -> Result<(), LibError> {
-        self.notify(&ProviderCheckResult::get_dummy())
+        self.notify(&CheckResult::get_dummy())
     }
 }
 

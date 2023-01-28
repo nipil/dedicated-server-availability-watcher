@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use reqwest::blocking::{Client, RequestBuilder};
 
-use crate::{LibError, ProviderCheckResult};
+use crate::{CheckResult, LibError};
 
 use super::{NotifierFactoryTrait, NotifierTrait};
 
@@ -68,7 +68,7 @@ impl NotifierFactoryTrait for SimpleGet {
 
 impl SimpleGet {
     /// Builds the query parameter from the structure's data
-    fn build_query_parameters(&self, result: &ProviderCheckResult) -> HashMap<&String, String> {
+    fn build_query_parameters(&self, result: &CheckResult) -> HashMap<&String, String> {
         let joined = result.available_servers.join(",");
         let mut params = HashMap::new();
         params.insert(&self.param_provider, result.provider_name.clone());
@@ -84,7 +84,7 @@ impl NotifierTrait for SimpleGet {
     }
 
     /// Sends an notification using the provided data.
-    fn notify(&self, result: &ProviderCheckResult) -> Result<(), LibError> {
+    fn notify(&self, result: &CheckResult) -> Result<(), LibError> {
         let params = self.build_query_parameters(result);
         let builder = Client::new().get(&self.url).query(&params);
         send_request(builder, self.name())
@@ -92,7 +92,7 @@ impl NotifierTrait for SimpleGet {
 
     /// Tests by sending a notification with dummy values.
     fn test(&self) -> Result<(), LibError> {
-        self.notify(&ProviderCheckResult::get_dummy())
+        self.notify(&CheckResult::get_dummy())
     }
 }
 
@@ -117,7 +117,7 @@ impl NotifierTrait for SimplePost {
     }
 
     /// Sends an notification using the provided data.
-    fn notify(&self, result: &ProviderCheckResult) -> Result<(), LibError> {
+    fn notify(&self, result: &CheckResult) -> Result<(), LibError> {
         let json = result.to_json()?;
         let builder = Client::new().post(&self.url).body(json);
         send_request(builder, self.name())
@@ -125,7 +125,7 @@ impl NotifierTrait for SimplePost {
 
     /// Tests by sending a notification with dummy values.
     fn test(&self) -> Result<(), LibError> {
-        self.notify(&ProviderCheckResult::get_dummy())
+        self.notify(&CheckResult::get_dummy())
     }
 }
 
@@ -150,7 +150,7 @@ impl NotifierTrait for SimplePut {
     }
 
     /// Sends an notification using the provided data.
-    fn notify(&self, result: &ProviderCheckResult) -> Result<(), LibError> {
+    fn notify(&self, result: &CheckResult) -> Result<(), LibError> {
         let json = result.to_json()?;
         let builder = Client::new().put(&self.url).body(json);
         send_request(builder, self.name())
@@ -158,6 +158,6 @@ impl NotifierTrait for SimplePut {
 
     /// Tests by sending a notification with dummy values.
     fn test(&self) -> Result<(), LibError> {
-        self.notify(&ProviderCheckResult::get_dummy())
+        self.notify(&CheckResult::get_dummy())
     }
 }
