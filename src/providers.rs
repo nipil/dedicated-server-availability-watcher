@@ -138,7 +138,7 @@ pub struct InventoryRunner {
 impl InventoryRunner {
     /// Builds an instance so that we do not endlessly repeat arguments
     pub fn new(provider_name: &str) -> anyhow::Result<Self> {
-        Ok(InventoryRunner {
+        Ok(Self {
             provider: Runner::build_provider(provider_name)?,
         })
     }
@@ -224,7 +224,7 @@ impl<'a> CheckRunner<'a> {
         servers: &'a Vec<String>,
         notifier_name: &Option<String>,
     ) -> anyhow::Result<Self> {
-        Ok(CheckRunner {
+        Ok(Self {
             provider: Runner::build_provider(provider_name)?,
             servers,
             notifier: Runner::build_notifier(notifier_name)?,

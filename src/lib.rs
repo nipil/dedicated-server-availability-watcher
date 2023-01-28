@@ -67,7 +67,7 @@ pub struct ProviderCheckResult {
 
 impl ProviderCheckResult {
     fn new(provider_name: &str) -> Self {
-        ProviderCheckResult {
+        Self {
             provider_name: provider_name.to_string(),
             available_servers: Vec::<String>::new(),
         }

@@ -90,7 +90,7 @@ impl Ovh {
             .unwrap_or_default()
             .trim()
             .to_string();
-        Ovh {
+        Self {
             excluded_datacenters: if p.is_empty() { None } else { Some(p) },
         }
     }
