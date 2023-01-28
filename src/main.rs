@@ -96,7 +96,7 @@ fn main() -> Result<()> {
                 ProviderCommands::List {} => providers::Runner::run_list()?,
 
                 ProviderCommands::Inventory { provider, all } => {
-                    providers::Runner::run_inventory(provider, *all)?;
+                    providers::InventoryRunner::new(provider)?.list_inventory(*all)?;
                 }
 
                 #[cfg(not(feature = "check_interval"))]

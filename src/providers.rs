@@ -125,18 +125,32 @@ impl Runner {
         }
         Ok(())
     }
+}
+
+/// An implementation for the InventoryRunner
+pub struct InventoryRunner {
+    provider: Box<dyn ProviderTrait>,
+}
+
+impl InventoryRunner {
+    /// Builds an instance so that we do not endlessly repeat arguments
+    pub fn new(provider_name: &str) -> anyhow::Result<Self> {
+        Ok(InventoryRunner {
+            provider: Runner::build_provider(provider_name)?,
+        })
+    }
 
     /// Prints a list of every kind of server known to the provider.
     /// By default, does not include servers which are out of stock
     /// Set `all` to true to include unavailable server kinds
-    pub fn run_inventory(provider_name: &str, all: bool) -> anyhow::Result<()> {
-        let provider = Factory::from_env_by_name(provider_name)
-            .with_context(|| format!("while setting up provider {provider_name}"))?;
-
+    pub fn list_inventory(&self, all: bool) -> anyhow::Result<()> {
         println!("Working...");
-        let inventory = provider
-            .inventory(all)
-            .with_context(|| format!("while getting inventory for provider {provider_name}"))?;
+        let inventory = self.provider.inventory(all).with_context(|| {
+            format!(
+                "while getting inventory for provider {}",
+                self.provider.name()
+            )
+        })?;
 
         if inventory.is_empty() {
             println!("No servers found");
@@ -162,7 +176,9 @@ impl Runner {
         }
         Ok(())
     }
+}
 
+impl Runner {
     /// Checks the given provider for availability of specific server types.
     /// - if periodic check is requested, nothing happens if there is no change
     /// - if a notifier is provided, and there are any available, a notification is sent
