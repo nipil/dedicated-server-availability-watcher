@@ -75,11 +75,10 @@ impl Factory {
     }
 }
 
-// Runners
+// Runners: included in the library so they can be tested.
 
 /// Utility struct to manage application execution.
-/// This is included in the library so it can be tested.
-pub struct Runner;
+struct Runner;
 
 impl Runner {
     /// Builds an actual notifier from a notifier name
