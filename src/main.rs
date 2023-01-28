@@ -79,12 +79,14 @@ fn main() -> Result<()> {
     match &cli.command {
         // Notifier actions
         Commands::Notifier { subcommand } => match subcommand {
-            None => notifiers::Runner::run_list()?,
+            None => notifiers::ListRunner::print_list()?,
 
             Some(sub) => match sub {
-                NotifierCommands::List {} => notifiers::Runner::run_list()?,
+                NotifierCommands::List {} => notifiers::ListRunner::print_list()?,
 
-                NotifierCommands::Test { notifier } => notifiers::Runner::run_test(notifier)?,
+                NotifierCommands::Test { notifier } => {
+                    notifiers::TestRunner::new(notifier)?.test()?
+                }
             },
         },
 

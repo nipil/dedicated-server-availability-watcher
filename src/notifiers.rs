@@ -64,29 +64,40 @@ impl Factory {
     }
 }
 
-// Runners
+// Runners: included in the library so it can be tested.
 
-/// Utility struct to manage application execution.
-/// This is included in the library so it can be tested.
-pub struct Runner;
+/// Implementation of the ListRunner
+pub struct ListRunner;
 
-impl Runner {
+impl ListRunner {
     /// Prints all available notifiers.
-    pub fn run_list() -> anyhow::Result<()> {
+    pub fn print_list() -> anyhow::Result<()> {
         println!("Available notifiers:");
         for notifier in Factory::get_available().iter() {
             println!("- {}", notifier.green());
         }
         Ok(())
     }
+}
+/// Implementation of the ListRunner
+pub struct TestRunner {
+    notifier: Box<dyn NotifierTrait>,
+}
+
+impl TestRunner {
+    /// Builds an instance
+    pub fn new(notifier_name: &str) -> anyhow::Result<Self> {
+        Ok(Self {
+            notifier: Factory::from_env_by_name(notifier_name)
+                .with_context(|| format!("while setting up notifier {notifier_name}"))?,
+        })
+    }
 
     /// Tests selected notifier.
-    pub fn run_test(name: &str) -> anyhow::Result<()> {
-        let notifier = Factory::from_env_by_name(name)
-            .with_context(|| format!("while setting up notifier {name}"))?;
-        notifier
+    pub fn test(&self) -> anyhow::Result<()> {
+        self.notifier
             .test()
-            .with_context(|| format!("while testing notifier {name}"))?;
+            .with_context(|| format!("while testing notifier {}", self.notifier.name()))?;
         println!("{}", "Notification sent".to_string().green());
         Ok(())
     }
