@@ -1,3 +1,4 @@
+pub mod online;
 pub mod ovh;
 pub mod scaleway;
 
@@ -47,6 +48,7 @@ type FactoryFunc = fn() -> Result<Box<dyn ProviderTrait>, LibError>;
 
 /// Builds a reference table of available providers.
 static FACTORY: &[(&str, FactoryFunc)] = &[
+    (online::ONLINE_NAME, online::Online::from_env),
     (ovh::OVH_NAME, ovh::Ovh::from_env),
     (scaleway::SCALEWAY_NAME, scaleway::Scaleway::from_env),
 ];
