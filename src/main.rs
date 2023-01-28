@@ -112,7 +112,8 @@ fn main() -> Result<()> {
                     servers,
                     notifier,
                     interval,
-                } => providers::Runner::run_check_interval(provider, servers, notifier, interval)?,
+                } => providers::CheckRunner::new(provider, servers, notifier)?
+                    .check_interval(interval)?,
             },
         },
     }

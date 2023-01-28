@@ -163,23 +163,6 @@ impl Runner {
         Ok(())
     }
 
-    /// Checks the given provider for availability of a specific server type.
-    fn check_servers(
-        provider: &Box<dyn ProviderTrait>,
-        servers: &Vec<String>,
-        result: &mut ProviderCheckResult,
-    ) -> anyhow::Result<()> {
-        for server in servers.iter() {
-            if provider
-                .check(server)
-                .with_context(|| format!("while checking for server {server}"))?
-            {
-                result.available_servers.push(server.clone());
-            }
-        }
-        Ok(())
-    }
-
     /// Checks the given provider for availability of specific server types.
     /// - if periodic check is requested, nothing happens if there is no change
     /// - if a notifier is provided, and there are any available, a notification is sent
@@ -204,32 +187,60 @@ impl Runner {
     fn sleep(duration: u16) {
         thread::sleep(time::Duration::from_secs(duration.into()));
     }
+}
+
+/// An implementation for the CheckRunner
+#[cfg(feature = "check_interval")]
+pub struct CheckRunner<'a> {
+    provider: Box<dyn ProviderTrait>,
+    servers: &'a Vec<String>,
+    notifier: Option<Box<dyn NotifierTrait>>,
+}
+
+#[cfg(feature = "check_interval")]
+impl<'a> CheckRunner<'a> {
+    /// Builds an instance so that we do not endlessly repeat arguments
+    pub fn new(
+        provider_name: &str,
+        servers: &'a Vec<String>,
+        notifier_name: &Option<String>,
+    ) -> anyhow::Result<Self> {
+        Ok(CheckRunner {
+            provider: Runner::build_provider(provider_name)?,
+            servers,
+            notifier: Runner::build_notifier(notifier_name)?,
+        })
+    }
+
+    /// Checks the given provider for availability of a specific server type.
+    fn check_servers(&self, result: &mut ProviderCheckResult) -> anyhow::Result<()> {
+        for server in self.servers.iter() {
+            if self
+                .provider
+                .check(server)
+                .with_context(|| format!("while checking for server {server}"))?
+            {
+                result.available_servers.push(server.clone());
+            }
+        }
+        Ok(())
+    }
 
     /// Checks the given provider once and notify if specified
     /// TODO: comparing to the previous state if available? (from disk ?)
-    #[cfg(feature = "check_interval")]
-    pub fn run_check_interval_once(
-        provider: &Box<dyn ProviderTrait>,
-        servers: &Vec<String>,
-        notifier: &Option<Box<dyn NotifierTrait>>,
-    ) -> anyhow::Result<()> {
-        let provider_name = provider.name();
+    fn check_interval_once(&self) -> anyhow::Result<()> {
+        let provider_name = self.provider.name();
         let mut latest = ProviderCheckResult::new(provider_name);
-        Self::check_servers(&provider, servers, &mut latest)
+        self.check_servers(&mut latest)
             .with_context(|| format!("while checking provider {}", provider_name))?;
-        Self::notify_result(&notifier, &latest)
+        Runner::notify_result(&self.notifier, &latest)
     }
 
     /// Checks the given provider in a loop, and notify of the differences
     /// After first execution, only displays errors so we do not crash the program
     #[cfg(feature = "check_interval")]
-    pub fn run_check_interval_loop(
-        provider: &Box<dyn ProviderTrait>,
-        servers: &Vec<String>,
-        notifier: &Option<Box<dyn NotifierTrait>>,
-        interval: u16,
-    ) -> anyhow::Result<()> {
-        let provider_name = provider.name();
+    fn check_interval_loop(&self, interval: u16) -> anyhow::Result<()> {
+        let provider_name = self.provider.name();
         let mut latest = ProviderCheckResult::new(provider_name);
 
         let mut first_check = true;
@@ -238,12 +249,13 @@ impl Runner {
         loop {
             // sleep for requested duration, but not on first iteration
             if !first_check {
-                Self::sleep(interval);
+                Runner::sleep(interval);
             }
 
             // compute current state
             let mut current = ProviderCheckResult::new(provider_name);
-            let result = Self::check_servers(provider, servers, &mut current)
+            let result = self
+                .check_servers(&mut current)
                 .with_context(|| format!("while checking provider {provider_name}"));
 
             // produce an error only the first check, to help the user detect configuration errors
@@ -265,7 +277,7 @@ impl Runner {
             }
 
             // Notify
-            let result = Self::notify_result(&notifier, &current);
+            let result = Runner::notify_result(&self.notifier, &current);
 
             // Move after borrowing
             latest = current;
@@ -286,19 +298,10 @@ impl Runner {
 
     /// Wrapper function to handle single and looped execution
     #[cfg(feature = "check_interval")]
-    pub fn run_check_interval(
-        provider_name: &str,
-        servers: &Vec<String>,
-        notifier_name: &Option<String>,
-        interval: &Option<u16>,
-    ) -> anyhow::Result<()> {
-        let provider = Self::build_provider(provider_name)?;
-        let notifier = Self::build_notifier(notifier_name)?;
+    pub fn check_interval(&self, interval: &Option<u16>) -> anyhow::Result<()> {
         match interval {
-            None => Self::run_check_interval_once(&provider, servers, &notifier),
-            Some(interval) => {
-                Self::run_check_interval_loop(&provider, servers, &notifier, *interval)
-            }
+            None => self.check_interval_once(),
+            Some(interval) => self.check_interval_loop(*interval),
         }
     }
 }
