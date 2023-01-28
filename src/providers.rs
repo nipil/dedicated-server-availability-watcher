@@ -200,9 +200,91 @@ impl Runner {
         Ok(())
     }
 
-    /// Checks the given provider for availability of specific server types.
-    /// - if periodic check is requested, nothing happens if there is no change
-    /// - if a notifier is provided, and there are any available, a notification is sent
+    // Sleep for the required duration
+    fn sleep(duration: u16) {
+        thread::sleep(time::Duration::from_secs(duration.into()));
+    }
+
+    /// Checks the given provider once and notify if specified
+    /// TODO: comparing to the previous state if available? (from disk ?)
+    #[cfg(feature = "check_interval")]
+    pub fn run_check_interval_once(
+        provider: &Box<dyn ProviderTrait>,
+        servers: &Vec<String>,
+        notifier: &Option<Box<dyn NotifierTrait>>,
+    ) -> anyhow::Result<()> {
+        let provider_name = provider.name();
+        let mut latest = ProviderCheckResult::new(provider_name);
+        Self::check_servers(&provider, servers, &mut latest)
+            .with_context(|| format!("while checking provider {}", provider_name))?;
+        Self::notify_result(&notifier, &latest)
+    }
+
+    /// Checks the given provider in a loop, and notify of the differences
+    /// After first execution, only displays errors so we do not crash the program
+    #[cfg(feature = "check_interval")]
+    pub fn run_check_interval_loop(
+        provider: &Box<dyn ProviderTrait>,
+        servers: &Vec<String>,
+        notifier: &Option<Box<dyn NotifierTrait>>,
+        interval: u16,
+    ) -> anyhow::Result<()> {
+        let provider_name = provider.name();
+        let mut latest = ProviderCheckResult::new(provider_name);
+
+        let mut first_check = true;
+        let mut first_notify = true;
+
+        loop {
+            // sleep for requested duration, but not on first iteration
+            if !first_check {
+                Self::sleep(interval);
+            }
+
+            // compute current state
+            let mut current = ProviderCheckResult::new(provider_name);
+            let result = Self::check_servers(provider, servers, &mut current)
+                .with_context(|| format!("while checking provider {provider_name}"));
+
+            // produce an error only the first check, to help the user detect configuration errors
+            if first_check && result.is_err() {
+                return result;
+            }
+            first_check = false;
+
+            // next times, only log the error, and do not go further
+            if let Err(err) = result {
+                eprintln!("{err}");
+                continue;
+            }
+
+            // Only notifiy when a difference is detected
+            // FIXME: convert to 'if bool && if let when https://github.com/rust-lang/rust/issues/53667 are stabilized
+            if current == latest {
+                continue;
+            }
+
+            // Notify
+            let result = Self::notify_result(&notifier, &current);
+
+            // Move after borrowing
+            latest = current;
+
+            // produce an error only the first notify, to help the user detect configuration errors
+            if first_notify && result.is_err() {
+                return result;
+            }
+            first_notify = false;
+
+            // next times, only log the error, and do not go further
+            if let Err(err) = result {
+                eprintln!("{err}");
+                continue;
+            }
+        }
+    }
+
+    /// Wrapper function to handle single and looped execution
     #[cfg(feature = "check_interval")]
     pub fn run_check_interval(
         provider_name: &str,
@@ -212,27 +294,11 @@ impl Runner {
     ) -> anyhow::Result<()> {
         let provider = Self::build_provider(provider_name)?;
         let notifier = Self::build_notifier(notifier_name)?;
-        let mut last = ProviderCheckResult::new(provider_name);
-
-        // FIXME: ignore errors while in loop ?
-        loop {
-            // populate results
-            let mut current = ProviderCheckResult::new(provider_name);
-            Self::check_servers(&provider, servers, &mut current)
-                .with_context(|| format!("while checking provider {provider_name}"))?;
-
-            // compare, notify and age result
-            if current != last {
-                Self::notify_result(&notifier, &current)?;
-                last = current;
-            }
-
-            // continue if necessary
-            match interval {
-                None => break,
-                Some(interval) => thread::sleep(time::Duration::from_secs((*interval).into())),
+        match interval {
+            None => Self::run_check_interval_once(&provider, servers, &notifier),
+            Some(interval) => {
+                Self::run_check_interval_loop(&provider, servers, &notifier, *interval)
             }
         }
-        Ok(())
     }
 }
