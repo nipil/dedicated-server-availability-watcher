@@ -82,15 +82,6 @@ impl Factory {
 pub struct Runner;
 
 impl Runner {
-    /// Prints all available providers.
-    pub fn run_list() -> anyhow::Result<()> {
-        println!("Available providers:");
-        for provider in Factory::get_available().iter() {
-            println!("- {}", provider.green());
-        }
-        Ok(())
-    }
-
     /// Builds an actual notifier from a notifier name
     fn build_provider(name: &str) -> anyhow::Result<Box<dyn ProviderTrait>> {
         Ok(Factory::from_env_by_name(name)
@@ -124,6 +115,19 @@ impl Runner {
             }
         }
         Ok(())
+    }
+}
+
+/// An implementation for the InventoryRunner
+pub struct ListRunner;
+
+impl ListRunner {
+    /// Prints all available providers.
+    pub fn print_list() {
+        println!("Available providers:");
+        for provider in Factory::get_available().iter() {
+            println!("- {}", provider.green());
+        }
     }
 }
 

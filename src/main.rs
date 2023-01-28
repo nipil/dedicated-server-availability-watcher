@@ -90,10 +90,10 @@ fn main() -> Result<()> {
 
         // Provider actions
         Commands::Provider { subcommand } => match subcommand {
-            None => providers::Runner::run_list()?,
+            None => providers::ListRunner::print_list(),
 
             Some(sub) => match sub {
-                ProviderCommands::List {} => providers::Runner::run_list()?,
+                ProviderCommands::List {} => providers::ListRunner::print_list(),
 
                 ProviderCommands::Inventory { provider, all } => {
                     providers::InventoryRunner::new(provider)?.list_inventory(*all)?;
