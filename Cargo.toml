@@ -6,6 +6,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
+array_tool = "1.0"
 clap = { version = "4.0", features = ["derive", "cargo"] }
 colored = "2.0"
 http = "0.2"
