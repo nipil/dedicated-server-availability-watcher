@@ -56,6 +56,16 @@ pub fn get_env_var(name: &str) -> Result<String, LibError> {
         })
 }
 
+/// Same as above, but as an option instead of an result
+pub fn get_env_var_option(name: &str) -> Option<String> {
+    get_env_var(name).map_or_else(|_| None, |o| Some(o))
+}
+
+/// Same as above, but provides a default value instead
+pub fn get_env_var_default(name: &str, default: &str) -> String {
+    get_env_var_option(name).unwrap_or(default.to_string())
+}
+
 /// CheckResult holds the data between providers and notifiers :
 /// - `provider::check` is the data source
 /// - `notifier::notify` is the data sink
