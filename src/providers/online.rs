@@ -107,21 +107,7 @@ impl Online {
         }
 
         // verify datacenter variable
-        let datacenters: Vec<String> = match dc_csv {
-            Some(dc_csv) => {
-                // split and trim datacenters
-                let result: Vec<String> = dc_csv.split(',').map(|s| s.trim().to_string()).collect();
-                // verify that no datacenter is empty
-                if result.iter().find(|i| i.is_empty()).is_some() {
-                    return Err(LibError::ValueError {
-                        name: "found empty online datacenter in datacenter env variable".into(),
-                        value: dc_csv.into(),
-                    });
-                }
-                result
-            }
-            None => Vec::new(),
-        };
+        let datacenters: Vec<String> = crate::tokenize_optional_csv_str(dc_csv)?;
 
         // construct the object if everything is ok
         Ok(Self {

@@ -66,6 +66,25 @@ pub fn get_env_var_default(name: &str, default: &str) -> String {
     get_env_var_option(name).unwrap_or(default.to_string())
 }
 
+/// Splits a CSV string into tokens, and verify that no token is empty
+pub fn tokenize_optional_csv_str(csv: &Option<String>) -> Result<Vec<String>, LibError> {
+    Ok(match csv {
+        Some(csv) => {
+            // split and trim each token
+            let result: Vec<String> = csv.split(',').map(|s| s.trim().to_string()).collect();
+            // verify that no token is empty
+            if result.iter().find(|i| i.is_empty()).is_some() {
+                return Err(LibError::ValueError {
+                    name: "found empty token in comma separated string".into(),
+                    value: csv.into(),
+                });
+            }
+            result
+        }
+        None => Vec::new(),
+    })
+}
+
 /// CheckResult holds the data between providers and notifiers :
 /// - `provider::check` is the data source
 /// - `notifier::notify` is the data sink

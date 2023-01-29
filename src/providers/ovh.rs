@@ -83,23 +83,7 @@ pub struct Ovh {
 impl Ovh {
     /// Builds a new instance.
     fn new(excluded_datacenters: &Option<String>) -> Result<Self, LibError> {
-        // verify datacenter variable
-        let excluded_datacenters: Vec<String> = match excluded_datacenters {
-            Some(dc) => {
-                // split and trim datacenters
-                let result: Vec<String> = dc.split(',').map(|s| s.trim().to_string()).collect();
-                // verify that no datacenter is empty
-                if result.iter().find(|i| i.is_empty()).is_some() {
-                    return Err(LibError::ValueError {
-                        name: "found empty value in datacenter env variable".into(),
-                        value: dc.into(),
-                    });
-                }
-                result
-            }
-            None => Vec::new(),
-        };
-
+        let excluded_datacenters = crate::tokenize_optional_csv_str(&excluded_datacenters)?;
         Ok(Self {
             excluded_datacenters,
         })
