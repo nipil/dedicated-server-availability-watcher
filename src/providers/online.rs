@@ -97,7 +97,7 @@ pub struct Online {
 
 impl Online {
     /// Builds a new instance.
-    fn new(api_token: &str, dc_csv: &str) -> Result<Self, LibError> {
+    fn new(api_token: &str, dc_csv: &Option<String>) -> Result<Self, LibError> {
         let api_token = api_token.to_string();
         if api_token.is_empty() {
             return Err(LibError::ValueError {
@@ -106,14 +106,22 @@ impl Online {
             });
         }
 
-        // split datacenters and verify that no datacenter is empty
-        let datacenters: Vec<String> = dc_csv.split(',').map(|s| s.trim().to_string()).collect();
-        if datacenters.iter().find(|i| i.is_empty()).is_some() {
-            return Err(LibError::ValueError {
-                name: "found empty online datacenter".into(),
-                value: dc_csv.into(),
-            });
-        }
+        // verify datacenter variable
+        let datacenters: Vec<String> = match dc_csv {
+            Some(dc_csv) => {
+                // split and trim datacenters
+                let result: Vec<String> = dc_csv.split(',').map(|s| s.trim().to_string()).collect();
+                // verify that no datacenter is empty
+                if result.iter().find(|i| i.is_empty()).is_some() {
+                    return Err(LibError::ValueError {
+                        name: "found empty online datacenter in datacenter env variable".into(),
+                        value: dc_csv.into(),
+                    });
+                }
+                result
+            }
+            None => Vec::new(),
+        };
 
         // construct the object if everything is ok
         Ok(Self {
@@ -205,7 +213,7 @@ impl ProviderFactoryTrait for Online {
     /// Builds an Ovh provider from environment variables.
     fn from_env() -> Result<Box<dyn ProviderTrait>, LibError> {
         let api_token = crate::get_env_var(ENV_ONLINE_PRIVATE_TOKEN)?;
-        let dc_csv = crate::get_env_var(ENV_ONLINE_DATACENTERS)?;
+        let dc_csv = crate::get_env_var_option(ENV_ONLINE_DATACENTERS);
         Ok(Box::new(Self::new(&api_token, &dc_csv)?))
     }
 }
