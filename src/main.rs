@@ -46,6 +46,10 @@ enum ProviderCommands {
         /// Provider
         provider: String,
 
+        /// Storage directory (defaults to current)
+        #[arg(short, long)]
+        storage_dir: Option<String>,
+
         /// List of server types
         #[arg(required = true)]
         servers: Vec<String>,
@@ -114,7 +118,8 @@ fn main() -> Result<()> {
                     servers,
                     notifier,
                     interval,
-                } => providers::CheckRunner::new(provider, servers, notifier)?
+                    storage_dir,
+                } => providers::CheckRunner::new(provider, servers, notifier, storage_dir)?
                     .check_interval(interval)?,
             },
         },

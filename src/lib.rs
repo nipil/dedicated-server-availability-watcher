@@ -1,7 +1,8 @@
 pub mod notifiers;
 pub mod providers;
+pub mod storage;
 
-use std::env;
+use std::{env, io};
 
 use serde::Serialize;
 use thiserror::Error;
@@ -11,7 +12,8 @@ use thiserror::Error;
 pub enum LibError {
     /// input/output errors
     #[error("Input/output error")]
-    IOError(#[from] std::io::Error),
+    // FIXME: faire marcher le #from : IOError(#[from] io::Error),
+    IOError { source: io::Error },
 
     /// Missing or empty environment variable.
     #[error("Environment variable `{name}` error")]

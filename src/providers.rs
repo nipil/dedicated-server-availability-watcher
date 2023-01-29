@@ -2,6 +2,8 @@ pub mod online;
 pub mod ovh;
 pub mod scaleway;
 
+use std::{env, path};
+
 #[cfg(feature = "check_interval")]
 use std::{thread, time};
 
@@ -12,6 +14,7 @@ use colored::Colorize;
 
 use crate::notifiers;
 use crate::notifiers::NotifierTrait;
+use crate::storage::Storage;
 use crate::CheckResult;
 use crate::LibError;
 
@@ -98,6 +101,16 @@ impl Runner {
                     .with_context(|| format!("while setting up notifier {notifier}"))?,
             ),
         })
+    }
+
+    /// Builds an accessor for stored results
+    fn build_storage(storage_dir: &Option<String>) -> anyhow::Result<Storage> {
+        let path = match storage_dir {
+            Some(dir) => path::Path::new(&dir).to_path_buf(),
+            None => env::current_dir()
+                .with_context(|| format!("Current directory is not accessible"))?,
+        };
+        Ok(Storage::new(&path)?)
     }
 
     /// Builds an actual notifier from a notifier name
@@ -218,6 +231,7 @@ pub struct CheckRunner<'a> {
     provider: Box<dyn ProviderTrait>,
     servers: &'a Vec<String>,
     notifier: Option<Box<dyn NotifierTrait>>,
+    storage: Storage,
 }
 
 #[cfg(feature = "check_interval")]
@@ -227,11 +241,13 @@ impl<'a> CheckRunner<'a> {
         provider_name: &str,
         servers: &'a Vec<String>,
         notifier_name: &Option<String>,
+        storage_dir: &'a Option<String>,
     ) -> anyhow::Result<Self> {
         Ok(Self {
             provider: Runner::build_provider(provider_name)?,
             servers,
             notifier: Runner::build_notifier(notifier_name)?,
+            storage: Runner::build_storage(storage_dir)?,
         })
     }
 
@@ -249,13 +265,28 @@ impl<'a> CheckRunner<'a> {
         Ok(())
     }
 
-    /// Checks the given provider once and notify if specified
-    /// TODO: comparing to the previous state if available? (from disk ?)
+    /// Checks the given provider, compare with previous result, and notify if needed
     fn check_interval_once(&self) -> anyhow::Result<()> {
         let provider_name = self.provider.name();
+
+        // get current result
         let mut latest = CheckResult::new(provider_name);
         self.check_servers(&mut latest)
             .with_context(|| format!("while checking provider {}", provider_name))?;
+
+        // exit if there was no change
+        if self
+            .storage
+            .is_check_result_equal(&provider_name, &self.servers, &latest)?
+        {
+            return Ok(());
+        }
+
+        // store latest
+        self.storage
+            .put_check_result_hash(provider_name, self.servers, &latest)?;
+
+        // Notify of the new
         Runner::notify_result(&self.notifier, &latest)
     }
 
