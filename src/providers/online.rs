@@ -102,7 +102,7 @@ impl Online {
         if api_token.is_empty() {
             return Err(LibError::ValueError {
                 name: "found empty online api token".into(),
-                value: dc_csv.into(),
+                value: api_token.into(),
             });
         }
 
