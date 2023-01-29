@@ -1,3 +1,4 @@
+use array_tool::vec::Intersect;
 use http::Method;
 use reqwest::blocking::{Client, RequestBuilder, Response};
 use serde::Deserialize;
@@ -54,6 +55,12 @@ struct OnlineDediboxProductStock {
 #[derive(Deserialize)]
 struct OnlineDediboxProductDatacenter {
     name: String,
+}
+
+#[derive(Deserialize)]
+struct OnlineDediboxProductAvailability {
+    available: bool,
+    datacenters: Vec<OnlineDediboxProductDatacenter>,
 }
 
 // I prefer the From trait, as i can pass references
@@ -193,6 +200,29 @@ impl Online {
 
         Ok(results)
     }
+
+    /// Gets a specific dedicated server product availability
+    fn get_product_availability(&self, product_id: &str) -> Result<bool, LibError> {
+        let url = format!("https://api.online.net/api/v1/dedibox/availability/{product_id}");
+        let response = self.get_api_authenticated(&url)?;
+
+        // fallback error handler
+        Self::do_error_if_not_successful(&response)?;
+
+        // reqwest deserialize and check
+        let result = response
+            .json::<OnlineDediboxProductAvailability>()
+            .map_err(|source| LibError::RequestError { source })?;
+
+        // if we do not filter on datacenters, any of them will be fine
+        if self.datacenters.len() == 0 {
+            return Ok(result.available);
+        }
+
+        // extract available datacenter names, and find if any are in common with desired ones
+        let result: Vec<String> = result.datacenters.iter().map(|d| d.name.clone()).collect();
+        Ok(self.datacenters.intersect(result).len() > 0)
+    }
 }
 
 impl ProviderFactoryTrait for Online {
@@ -222,6 +252,6 @@ impl ProviderTrait for Online {
 
     /// Checks provider for the availability of a given server type.
     fn check(&self, server: &str) -> Result<bool, LibError> {
-        todo!();
+        self.get_product_availability(server)
     }
 }
