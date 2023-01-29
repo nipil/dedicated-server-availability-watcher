@@ -2,7 +2,6 @@ pub mod notifiers;
 pub mod providers;
 
 use std::env;
-use std::env::VarError;
 
 use serde::Serialize;
 use thiserror::Error;
@@ -10,10 +9,13 @@ use thiserror::Error;
 /// NotifierError enumerates all possible errors returned by this library.
 #[derive(Error, Debug)]
 pub enum LibError {
-    // technical errors
+    /// input/output errors
+    #[error("Input/output error")]
+    IOError(#[from] std::io::Error),
+
     /// Missing or empty environment variable.
     #[error("Environment variable `{name}` error")]
-    EnvError { name: String, source: VarError },
+    EnvError { name: String, source: env::VarError },
 
     /// Invalid value errors
     #[error("Invalid variable `{name}` error with value `{value}`")]
@@ -31,7 +33,6 @@ pub enum LibError {
     #[error("Json error")]
     JsonError { source: serde_json::Error },
 
-    // logic errors
     /// Unknown server reference.
     #[error("Unknown server `{server}`")]
     UnknownServer { server: String },
