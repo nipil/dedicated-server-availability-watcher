@@ -107,7 +107,9 @@ impl Runner {
     ) -> anyhow::Result<()> {
         match notifier {
             None => {
-                println!("{}", result.available_servers.join(", ").green());
+                for srv in result.available_servers.iter() {
+                    println!("{}", srv.green());
+                }
             }
             Some(notifier) => {
                 notifier.notify(&result).with_context(|| {
