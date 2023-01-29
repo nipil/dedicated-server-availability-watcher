@@ -76,17 +76,33 @@ impl From<&OvhDedicatedServerInformation> for ServerInfo {
 /// Gets server inventory and availability.
 pub struct Ovh {
     /// Used to exclude datacenters by their id.
-    /// Examples : ca,bhs,fr,gra,rbx,sbg
-    excluded_datacenters: Option<String>,
+    /// Examples : ["ca","bhs","fr","gra","rbx","sbg"]
+    excluded_datacenters: Vec<String>,
 }
 
 impl Ovh {
     /// Builds a new instance.
-    fn new() -> Self {
-        let excluded_datacenters = crate::get_env_var_option(ENV_NAME_OVH_EXCLUDE_DATACENTER);
-        Self {
+    fn new(excluded_datacenters: &Option<String>) -> Result<Self, LibError> {
+        // verify datacenter variable
+        let excluded_datacenters: Vec<String> = match excluded_datacenters {
+            Some(dc) => {
+                // split and trim datacenters
+                let result: Vec<String> = dc.split(',').map(|s| s.trim().to_string()).collect();
+                // verify that no datacenter is empty
+                if result.iter().find(|i| i.is_empty()).is_some() {
+                    return Err(LibError::ValueError {
+                        name: "found empty value in datacenter env variable".into(),
+                        value: dc.into(),
+                    });
+                }
+                result
+            }
+            None => Vec::new(),
+        };
+
+        Ok(Self {
             excluded_datacenters,
-        }
+        })
     }
 
     /// Gets availability for specified server types.
@@ -95,21 +111,19 @@ impl Ovh {
         &self,
         server: Option<&str>,
     ) -> Result<Vec<OvhDedicatedServerInformation>, LibError> {
-        let mut query: Vec<(&str, &str)> = Vec::new();
+        let mut query: Vec<(&str, String)> = Vec::new();
 
-        match &self.excluded_datacenters {
-            None => {
-                query.push(("excludeDatacenters", "false"));
-            }
-            Some(excluded_datacenters) => {
-                query.push(("excludeDatacenters", "true"));
-                query.push(("datacenters", &excluded_datacenters));
-            }
+        // Handle optional datacenter exclusions.
+        if self.excluded_datacenters.is_empty() {
+            query.push(("excludeDatacenters", "false".into()));
+        } else {
+            query.push(("excludeDatacenters", "true".into()));
+            query.push(("datacenters", self.excluded_datacenters.join(",")));
         }
 
-        // Handles optional filtering.
+        // Handles optional server filtering.
         if let Some(server) = server {
-            query.push(("server", server));
+            query.push(("server", server.into()));
         }
 
         let client = reqwest::blocking::Client::new();
@@ -136,7 +150,8 @@ impl Ovh {
 impl ProviderFactoryTrait for Ovh {
     /// Builds an Ovh provider from environment variables.
     fn from_env() -> Result<Box<dyn ProviderTrait>, LibError> {
-        Ok(Box::new(Ovh::new()))
+        let excluded_datacenters = crate::get_env_var_option(ENV_NAME_OVH_EXCLUDE_DATACENTER);
+        Ok(Box::new(Ovh::new(&excluded_datacenters)?))
     }
 }
 
