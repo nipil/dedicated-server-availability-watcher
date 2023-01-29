@@ -1,5 +1,3 @@
-use std::env;
-
 use serde::Deserialize;
 
 use crate::LibError;
@@ -85,13 +83,9 @@ pub struct Ovh {
 impl Ovh {
     /// Builds a new instance.
     fn new() -> Self {
-        // Do not error if the env var is empty or not present, as it is optional
-        let p = env::var(ENV_NAME_OVH_EXCLUDE_DATACENTER)
-            .unwrap_or_default()
-            .trim()
-            .to_string();
+        let excluded_datacenters = crate::get_env_var_option(ENV_NAME_OVH_EXCLUDE_DATACENTER);
         Self {
-            excluded_datacenters: if p.is_empty() { None } else { Some(p) },
+            excluded_datacenters,
         }
     }
 
