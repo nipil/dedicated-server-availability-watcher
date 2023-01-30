@@ -7,21 +7,23 @@ A simple CLI/daemon tool polling dedicated server availability which optionally 
 OVH inventory :
 
     Known servers:
-    1801sk14 N/A N/A
+    1801sk12 (@fr,gra,rbx,sbg) N/A N/A
     ...
-    19fs03-04-apac ram-64g-ecc-1866 hardraid-12x4000sas
+    21adv01-mum (@ynm) ram-32g-ecc-3200 softraid-2x4000sa
     ...
-    20adv02-syd ram-64g-ecc-2666 softraid-2x3840nvme
+    21adv01 (@bhs,fra,gra,lon,rbx,sbg,waw) ram-32g-ecc-3200 softraid-2x6000sa
     ...
-    21adv01-mum ram-64g-ecc-3200 softraid-3x1920nvme
+    21game01-apac (@sgp) ram-64g-ecc-2400 softraid-2x500nvme
     ...
-    22rise01 ram-32g-ecc-2666 softraid-2x4000sa
+    21game01 (@bhs,fra,gra,lon,sbg,waw) ram-64g-ecc-2666 softraid-2x500nvme
     ...
-    22sk030 ram-32g-1333 softraid-2x2000sa
+    21hci01 (@bhs,fra,gra,lon,rbx,sbg,waw) ram-192g-ecc-2933 softraid-12x3840sas-1x3200nvme
     ...
-    22sys041 ram-32g-ecc-2133 softraid-2x2000sa
+    22sk030 (@bhs,ca,fr,gra,rbx,sbg) ram-32g-1333 softraid-2x2000sa
     ...
-    23risestorle01 ram-32g-ecc-2666 softraid-3x960nvme
+    22skgame01-apac (@sg,sgp) ram-32g-noecc-2133 hybridsoftraid-2x480ssd-1x4000sa
+    ...
+    23risestorle01 (@bhs,fra,gra,lon,rbx,sbg,waw) ram-32g-ecc-2666 softraid-3x960nvme
 
 Checking for some OVH server type :
 

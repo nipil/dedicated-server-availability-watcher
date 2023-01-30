@@ -40,6 +40,7 @@ impl OvhDedicatedServerInformation {
 #[derive(Deserialize)]
 struct OvhDedicatedServerDatacenterAvailability {
     availability: String,
+    datacenter: String,
 }
 
 impl OvhDedicatedServerDatacenterAvailability {
@@ -52,12 +53,20 @@ impl OvhDedicatedServerDatacenterAvailability {
     }
 }
 
-// I prefer the From trait, as i can pass references
+// I prefer the Frommkdir  trait, as i can pass references
 impl From<&OvhDedicatedServerInformation> for ServerInfo {
     /// Extracts only interesting information which is common to all providers
     fn from(info: &OvhDedicatedServerInformation) -> Self {
         ServerInfo {
-            reference: info.server.clone(),
+            reference: format!(
+                "{} (@{})",
+                info.server,
+                info.datacenters
+                    .iter()
+                    .map(|d| d.datacenter.clone())
+                    .collect::<Vec<String>>()
+                    .join(",")
+            ),
             memory: info
                 .memory
                 .as_ref()
