@@ -110,7 +110,7 @@ impl Runner {
             None => env::current_dir()
                 .with_context(|| format!("Current directory is not accessible"))?,
         };
-        Ok(CheckResultStorage::new(&path)?)
+        Ok(CheckResultStorage::new(&path).context("while initializing CheckResultStorage")?)
     }
 
     /// Builds an actual notifier from a notifier name
