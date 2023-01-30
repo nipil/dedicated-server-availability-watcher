@@ -19,5 +19,5 @@ Cargo.lock
 # launch file for CodeLLDB
 .vscode/launch.json
 
-# local storage
-check_result
+# hashes for checkresult storage
+*.sha256

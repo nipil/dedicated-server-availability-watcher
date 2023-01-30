@@ -43,7 +43,6 @@ impl CheckResultStorage {
         let file_name = format!("{provider_name}-{hash}.sha256");
         // FIXME: optimize the building of path instead of mutable things ?
         let mut path = self.path.clone();
-        path.push("check_result");
         path.push(file_name);
         Ok(dbg!(path))
     }
