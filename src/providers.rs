@@ -14,7 +14,7 @@ use colored::Colorize;
 
 use crate::notifiers;
 use crate::notifiers::NotifierTrait;
-use crate::storage::Storage;
+use crate::storage::CheckResultStorage;
 use crate::CheckResult;
 use crate::LibError;
 
@@ -104,13 +104,13 @@ impl Runner {
     }
 
     /// Builds an accessor for stored results
-    fn build_storage(storage_dir: &Option<String>) -> anyhow::Result<Storage> {
+    fn build_storage(storage_dir: &Option<String>) -> anyhow::Result<CheckResultStorage> {
         let path = match storage_dir {
             Some(dir) => path::Path::new(&dir).to_path_buf(),
             None => env::current_dir()
                 .with_context(|| format!("Current directory is not accessible"))?,
         };
-        Ok(Storage::new(&path)?)
+        Ok(CheckResultStorage::new(&path)?)
     }
 
     /// Builds an actual notifier from a notifier name
@@ -231,7 +231,7 @@ pub struct CheckRunner<'a> {
     provider: Box<dyn ProviderTrait>,
     servers: &'a Vec<String>,
     notifier: Option<Box<dyn NotifierTrait>>,
-    storage: Storage,
+    storage: CheckResultStorage,
 }
 
 #[cfg(feature = "check_interval")]
@@ -277,14 +277,14 @@ impl<'a> CheckRunner<'a> {
         // exit if there was no change
         if self
             .storage
-            .is_check_result_equal(&provider_name, &self.servers, &latest)?
+            .is_equal(&provider_name, &self.servers, &latest)?
         {
             return Ok(());
         }
 
         // store latest
         self.storage
-            .put_check_result_hash(provider_name, self.servers, &latest)?;
+            .put_hash(provider_name, self.servers, &latest)?;
 
         // Notify of the new
         Runner::notify_result(&self.notifier, &latest)

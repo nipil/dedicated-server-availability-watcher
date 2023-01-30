@@ -7,7 +7,7 @@ use crate::{CheckResult, LibError};
 
 /// Storage
 
-pub struct Storage {
+pub struct CheckResultStorage {
     path: path::PathBuf,
 }
 
@@ -21,7 +21,7 @@ fn get_sha256_string<T: Serialize>(value: &T) -> Result<String, LibError> {
     Ok(format!("{result:x}"))
 }
 
-impl Storage {
+impl CheckResultStorage {
     /// Builds a new storage
     pub fn new(path: &path::PathBuf) -> Result<Self, LibError> {
         if !path.is_dir() {
@@ -34,7 +34,7 @@ impl Storage {
     }
 
     /// Builds the storage path for a provided provider/servers combo
-    fn get_check_result_path(
+    fn get_path(
         &self,
         provider_name: &str,
         servers: &Vec<String>,
@@ -49,13 +49,13 @@ impl Storage {
     }
 
     /// Stores the hash of a provided provider/servers combo
-    pub fn put_check_result_hash(
+    pub fn put_hash(
         &self,
         provider_name: &str,
         servers: &Vec<String>,
         check_result: &CheckResult,
     ) -> Result<(), LibError> {
-        let path = self.get_check_result_path(&provider_name, &servers)?;
+        let path = self.get_path(&provider_name, &servers)?;
         let available_server_hash = get_sha256_string(&check_result.available_servers)?;
         fs::write(path, dbg!(available_server_hash)).map_err(|source| LibError::IOError { source })
     }
@@ -81,13 +81,13 @@ impl Storage {
     ///   Some(stored_hash) => Ok(true),                            // string read and trimmed
     /// }
     /// ```
-    pub fn get_check_result_hash(
+    pub fn get_hash(
         &self,
         provider_name: &str,
         servers: &Vec<String>,
     ) -> Result<Option<String>, LibError> {
         // not being able to build the file path is a problem, so we might return an Err
-        let path = self.get_check_result_path(&provider_name, &servers)?;
+        let path = self.get_path(&provider_name, &servers)?;
         // handle the result of reading the file as a textual string
         match dbg!(fs::read_to_string(path)) {
             Err(err) => match err.kind() {
@@ -103,14 +103,14 @@ impl Storage {
 
     /// Compares the provided check_result by building its hash and comparing to the one stored
     /// Its error behaviour is the same as `get_check_result_hash()`
-    pub fn is_check_result_equal(
+    pub fn is_equal(
         &self,
         provider_name: &str,
         servers: &Vec<String>,
         check_result: &CheckResult,
     ) -> Result<bool, LibError> {
         // get eventual stored string or produce an error if something critical happened
-        let hash = self.get_check_result_hash(provider_name, servers)?;
+        let hash = self.get_hash(provider_name, servers)?;
         match hash {
             // by design, if the hash was not present on disk, check_result is deemed not equal
             None => Ok(false),
