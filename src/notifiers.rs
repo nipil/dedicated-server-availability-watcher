@@ -1,5 +1,5 @@
 #[cfg(feature = "ifttt-webhook")]
-pub mod ifttt;
+pub mod ifttt_webhook;
 #[cfg(feature = "simple")]
 pub mod simple;
 
@@ -39,11 +39,14 @@ static FACTORY: &[(&str, FactoryFunc)] = &[
     #[cfg(feature = "simple-put")]
     (simple::SIMPLE_PUT_NAME, simple::SimplePut::from_env),
     #[cfg(feature = "ifttt-webhook-json")]
-    (ifttt::IFTTT_WEBHOOK_JSON_NAME, ifttt::WebHookJson::from_env),
+    (
+        ifttt_webhook::IFTTT_WEBHOOK_JSON_NAME,
+        ifttt_webhook::WebHookJson::from_env,
+    ),
     #[cfg(feature = "ifttt-webhook-values")]
     (
-        ifttt::IFTTT_WEBHOOK_VALUES_NAME,
-        ifttt::WebHookValues::from_env,
+        ifttt_webhook::IFTTT_WEBHOOK_VALUES_NAME,
+        ifttt_webhook::WebHookValues::from_env,
     ),
 ];
 
