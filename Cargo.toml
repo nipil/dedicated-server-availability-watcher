@@ -27,15 +27,27 @@ strip = "symbols"
 
 [features]
 # default features, add names here to build them by default
-default = ["experimental"]
+default = ["experimental", "notifiers", "providers"]
 
-# add features to "experimental" so they can be compiles in
-# if someone wants to test them before they are either kept or trashed
+# providers features
+providers = ["ovh", "online", "scaleway"]
+online = []
+ovh = []
+scaleway = []
+
+# notifier features
+notifiers = ["simple", "ifttt-webhook"]
+simple = ["simple-get", "simple-post", "simple-put"]
+simple-get = []
+simple-post = []
+simple-put = []
+ifttt-webhook = ["ifttt-webhook-json", "ifttt-webhook-values"]
+ifttt-webhook-json = []
+ifttt-webhook-values = []
+
+# add features to "experimental" as desired
 experimental = ["check_interval"]
-# experimental features
 check_interval = []
 
-# add featurs to "deprecated" so they can be compiles back in
-# if someone wants them before code is purged
+# add featurs to "deprecated" so they are compiled back in
 deprecated = []
-# add deprecated features here

@@ -1,5 +1,10 @@
+#[cfg(feature = "online")]
 pub mod online;
+
+#[cfg(feature = "ovh")]
 pub mod ovh;
+
+#[cfg(feature = "scaleway")]
 pub mod scaleway;
 
 use std::{env, path};
@@ -51,8 +56,11 @@ type FactoryFunc = fn() -> Result<Box<dyn ProviderTrait>, LibError>;
 
 /// Builds a reference table of available providers.
 static FACTORY: &[(&str, FactoryFunc)] = &[
+    #[cfg(feature = "online")]
     (online::ONLINE_NAME, online::Online::from_env),
+    #[cfg(feature = "ovh")]
     (ovh::OVH_NAME, ovh::Ovh::from_env),
+    #[cfg(feature = "scaleway")]
     (scaleway::SCALEWAY_NAME, scaleway::Scaleway::from_env),
 ];
 

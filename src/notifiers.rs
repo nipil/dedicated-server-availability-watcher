@@ -1,4 +1,6 @@
+#[cfg(feature = "ifttt-webhook")]
 pub mod ifttt;
+#[cfg(feature = "simple")]
 pub mod simple;
 
 use anyhow;
@@ -30,10 +32,15 @@ type FactoryFunc = fn() -> Result<Box<dyn NotifierTrait>, LibError>;
 
 /// Builds a reference table of available notifiers.
 static FACTORY: &[(&str, FactoryFunc)] = &[
+    #[cfg(feature = "simple-get")]
     (simple::SIMPLE_GET_NAME, simple::SimpleGet::from_env),
+    #[cfg(feature = "simple-post")]
     (simple::SIMPLE_POST_NAME, simple::SimplePost::from_env),
+    #[cfg(feature = "simple-put")]
     (simple::SIMPLE_PUT_NAME, simple::SimplePut::from_env),
+    #[cfg(feature = "ifttt-webhook-json")]
     (ifttt::IFTTT_WEBHOOK_JSON_NAME, ifttt::WebHookJson::from_env),
+    #[cfg(feature = "ifttt-webhook-values")]
     (
         ifttt::IFTTT_WEBHOOK_VALUES_NAME,
         ifttt::WebHookValues::from_env,
