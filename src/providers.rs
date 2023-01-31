@@ -19,7 +19,6 @@ use anyhow;
 use anyhow::Context;
 use colored::Colorize;
 use std::{env, path};
-use std::{thread, time};
 
 /// Defines the common information returned by `ProviderTrait::inventory()`.
 pub struct ServerInfo {
@@ -204,35 +203,9 @@ impl InventoryRunner {
     }
 }
 
-impl Runner {
-    /// Checks the given provider for availability of specific server types.
-    /// - if periodic check is requested, nothing happens if there is no change
-    /// - if a notifier is provided, and there are any available, a notification is sent
-    #[cfg(not(feature = "check_interval"))]
-    pub fn run_check_single(
-        provider_name: &str,
-        servers: &Vec<String>,
-        notifier_name: &Option<String>,
-    ) -> anyhow::Result<()> {
-        let provider = Self::build_provider(provider_name)?;
-        let notifier = Self::build_notifier(notifier_name)?;
-        let mut latest = CheckResult::new(provider_name);
-
-        Self::check_servers(&provider, servers, &mut latest)
-            .with_context(|| format!("while checking provider {provider_name}"))?;
-
-        Self::notify_result(&notifier, &latest)?;
-        Ok(())
-    }
-
-    // Sleep for the required duration
-    fn sleep(duration: u16) {
-        thread::sleep(time::Duration::from_secs(duration.into()));
-    }
-}
+impl Runner {}
 
 /// An implementation for the CheckRunner
-#[cfg(feature = "check_interval")]
 pub struct CheckRunner<'a> {
     provider: Box<dyn ProviderTrait>,
     servers: &'a Vec<String>,
@@ -240,7 +213,6 @@ pub struct CheckRunner<'a> {
     storage: CheckResultStorage,
 }
 
-#[cfg(feature = "check_interval")]
 impl<'a> CheckRunner<'a> {
     /// Builds an instance so that we do not endlessly repeat arguments
     pub fn new(
@@ -272,7 +244,7 @@ impl<'a> CheckRunner<'a> {
     }
 
     /// Checks the given provider, compare with previous result, and notify if needed
-    fn check_interval_once(&self) -> anyhow::Result<()> {
+    pub fn check_once(&self) -> anyhow::Result<()> {
         let provider_name = self.provider.name();
 
         // get current result
@@ -280,7 +252,7 @@ impl<'a> CheckRunner<'a> {
         self.check_servers(&mut latest)
             .with_context(|| format!("while checking provider {}", provider_name))?;
 
-        // exit if there was no change
+        // do nothing more if there was no change
         if self
             .storage
             .is_equal(&provider_name, &self.servers, &latest)?
@@ -294,73 +266,5 @@ impl<'a> CheckRunner<'a> {
 
         // Notify of the new
         Runner::notify_result(&self.notifier, &latest)
-    }
-
-    /// Checks the given provider in a loop, and notify of the differences
-    /// After first execution, only displays errors so we do not crash the program
-    #[cfg(feature = "check_interval")]
-    fn check_interval_loop(&self, interval: u16) -> anyhow::Result<()> {
-        let provider_name = self.provider.name();
-        let mut latest = CheckResult::new(provider_name);
-
-        let mut first_check = true;
-        let mut first_notify = true;
-
-        loop {
-            // sleep for requested duration, but not on first iteration
-            if !first_check {
-                Runner::sleep(interval);
-            }
-
-            // compute current state
-            let mut current = CheckResult::new(provider_name);
-            let result = self
-                .check_servers(&mut current)
-                .with_context(|| format!("while checking provider {provider_name}"));
-
-            // produce an error only the first check, to help the user detect configuration errors
-            if first_check && result.is_err() {
-                return result;
-            }
-            first_check = false;
-
-            // next times, only log the error, and do not go further
-            if let Err(err) = result {
-                eprintln!("{err}");
-                continue;
-            }
-
-            // Only notifiy when a difference is detected
-            if current == latest {
-                continue;
-            }
-
-            // Notify
-            let result = Runner::notify_result(&self.notifier, &current);
-
-            // Move after borrowing
-            latest = current;
-
-            // produce an error only the first notify, to help the user detect configuration errors
-            if first_notify && result.is_err() {
-                return result;
-            }
-            first_notify = false;
-
-            // next times, only log the error, and do not go further
-            if let Err(err) = result {
-                eprintln!("{err}");
-                continue;
-            }
-        }
-    }
-
-    /// Wrapper function to handle single and looped execution
-    #[cfg(feature = "check_interval")]
-    pub fn check_interval(&self, interval: &Option<u16>) -> anyhow::Result<()> {
-        match interval {
-            None => self.check_interval_once(),
-            Some(interval) => self.check_interval_loop(*interval),
-        }
     }
 }

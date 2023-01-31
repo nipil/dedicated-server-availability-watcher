@@ -47,8 +47,7 @@ ifttt-webhook-json = []
 ifttt-webhook-values = []
 
 # add features to "experimental" as desired
-experimental = ["check_interval"]
-check_interval = []
+experimental = []
 
 # add featurs to "deprecated" so they are compiled back in
 deprecated = []
