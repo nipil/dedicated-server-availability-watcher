@@ -11,14 +11,18 @@ pub struct CheckResultStorage {
     path: path::PathBuf,
 }
 
+/// Generates a SHA256 hash-string of the argument
+///
+/// we use json serialization as an intermediary data, because
+/// - we already include serde_json crate
+/// - we mainly hash String and Vec<String> for which json is "good enough"
+///
+/// We use the convenience function for Sha256 as we work blocking and data is small
+///
 fn get_sha256_string<T: Serialize>(value: &T) -> Result<String, LibError> {
-    // FIXME: use something else than json for serializing to a hash, that is stupidly inefficient.
     let json = serde_json::to_string(&value).map_err(|source| LibError::JsonError { source })?;
-    // FIXME: isn't there a convenience function for hashing ?
-    let mut hasher = Sha256::new();
-    hasher.update(json);
-    let result = hasher.finalize();
-    Ok(format!("{result:x}"))
+    let hash = Sha256::digest(json);
+    Ok(format!("{hash:x}"))
 }
 
 impl CheckResultStorage {
