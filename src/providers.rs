@@ -333,7 +333,6 @@ impl<'a> CheckRunner<'a> {
             }
 
             // Only notifiy when a difference is detected
-            // FIXME: convert to 'if bool && if let when https://github.com/rust-lang/rust/issues/53667 are stabilized
             if current == latest {
                 continue;
             }
