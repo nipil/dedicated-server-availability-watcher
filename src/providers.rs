@@ -7,21 +7,16 @@ pub mod ovh;
 #[cfg(feature = "scaleway")]
 pub mod scaleway;
 
-use std::{env, path};
-
-#[cfg(feature = "check_interval")]
-use std::{thread, time};
-
-use anyhow;
-use anyhow::Context;
-
-use colored::Colorize;
-
 use crate::notifiers;
 use crate::notifiers::NotifierTrait;
 use crate::storage::CheckResultStorage;
 use crate::CheckResult;
 use crate::LibError;
+use anyhow;
+use anyhow::Context;
+use colored::Colorize;
+use std::{env, path};
+use std::{thread, time};
 
 /// Defines the common information returned by `ProviderTrait::inventory()`.
 pub struct ServerInfo {

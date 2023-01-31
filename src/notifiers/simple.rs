@@ -1,10 +1,7 @@
-use std::collections::HashMap;
-
-use reqwest::blocking::{Client, RequestBuilder};
-
-use crate::{CheckResult, LibError};
-
 use super::{NotifierFactoryTrait, NotifierTrait};
+use crate::{CheckResult, LibError};
+use reqwest::blocking::{Client, RequestBuilder};
+use std::collections::HashMap;
 
 // SIMPLE implementation (get, post, put)
 

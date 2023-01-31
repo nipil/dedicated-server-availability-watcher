@@ -2,9 +2,8 @@ pub mod notifiers;
 pub mod providers;
 pub mod storage;
 
-use std::{env, io};
-
 use serde::Serialize;
+use std::{env, io};
 use thiserror::Error;
 
 /// NotifierError enumerates all possible errors returned by this library.

@@ -1,11 +1,8 @@
-use std::collections::HashMap;
-
+use super::{NotifierFactoryTrait, NotifierTrait};
+use crate::{CheckResult, LibError};
 use reqwest::blocking::Response;
 use serde::Deserialize;
-
-use crate::{CheckResult, LibError};
-
-use super::{NotifierFactoryTrait, NotifierTrait};
+use std::collections::HashMap;
 
 // IFTTT WEBHOOK implementations
 

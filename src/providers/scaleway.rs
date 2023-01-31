@@ -1,13 +1,10 @@
-use std::collections::HashMap;
-
+use super::{ProviderFactoryTrait, ProviderTrait, ServerInfo};
+use crate::LibError;
 use http::{Method, StatusCode};
 use reqwest::blocking::{Client, RequestBuilder, Response};
 use serde::Deserialize;
+use std::collections::HashMap;
 use uuid::Uuid;
-
-use crate::LibError;
-
-use super::{ProviderFactoryTrait, ProviderTrait, ServerInfo};
 
 // Scaleway implementation
 

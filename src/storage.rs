@@ -1,11 +1,7 @@
-use serde::Serialize;
-use std::{fs, path};
-
-use sha2::{Digest, Sha256};
-
 use crate::{CheckResult, LibError};
-
-/// Storage
+use serde::Serialize;
+use sha2::{Digest, Sha256};
+use std::{fs, path};
 
 pub struct CheckResultStorage {
     path: path::PathBuf,

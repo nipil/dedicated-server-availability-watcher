@@ -1,8 +1,6 @@
-use serde::Deserialize;
-
-use crate::LibError;
-
 use super::{ProviderFactoryTrait, ProviderTrait, ServerInfo};
+use crate::LibError;
+use serde::Deserialize;
 
 // OVH implementation
 

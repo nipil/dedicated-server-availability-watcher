@@ -1,12 +1,10 @@
+use super::{ProviderFactoryTrait, ProviderTrait, ServerInfo};
+use crate::LibError;
 use array_tool::vec::Intersect;
 use http::Method;
 use reqwest::blocking::{Client, RequestBuilder, Response};
 use serde::Deserialize;
 use serde_json::Value;
-
-use crate::LibError;
-
-use super::{ProviderFactoryTrait, ProviderTrait, ServerInfo};
 
 // Online implementation
 

@@ -1,7 +1,6 @@
+use anyhow::Result;
 use clap::{Parser, Subcommand};
 use dedicated_server_availability_watcher::{notifiers, providers};
-
-use anyhow::Result;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]

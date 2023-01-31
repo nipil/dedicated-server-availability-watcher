@@ -3,11 +3,10 @@ pub mod ifttt_webhook;
 #[cfg(feature = "simple")]
 pub mod simple;
 
+use crate::{CheckResult, LibError};
 use anyhow;
 use anyhow::Context;
 use colored::Colorize;
-
-use crate::{CheckResult, LibError};
 
 /// Defines the expected behaviour of every notifier handler.
 pub trait NotifierTrait {
