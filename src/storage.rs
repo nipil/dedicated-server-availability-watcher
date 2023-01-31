@@ -41,10 +41,9 @@ impl CheckResultStorage {
     ) -> Result<path::PathBuf, LibError> {
         let hash = get_sha256_string(servers)?;
         let file_name = format!("{provider_name}-{hash}.sha256");
-        // FIXME: optimize the building of path instead of mutable things ?
         let mut path = self.path.clone();
         path.push(file_name);
-        Ok(dbg!(path))
+        Ok(path)
     }
 
     /// Stores the hash of a provided provider/servers combo
