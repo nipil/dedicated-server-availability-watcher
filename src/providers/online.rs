@@ -27,6 +27,7 @@ struct OnlineDediboxProduct {
 }
 
 impl OnlineDediboxProduct {
+    /// Convenience function to detemine availability
     fn is_available(&self) -> bool {
         for stock in self.stocks.iter() {
             if stock.stock > 0 {
@@ -37,6 +38,7 @@ impl OnlineDediboxProduct {
     }
 }
 
+/// Used for API result deserialisation, with only interesting fields implemented
 #[derive(Deserialize)]
 struct OnlineDediboxProductSpecs {
     cpu: String,
@@ -44,17 +46,20 @@ struct OnlineDediboxProductSpecs {
     disks: String,
 }
 
+/// Used for API result deserialisation, with only interesting fields implemented
 #[derive(Deserialize)]
 struct OnlineDediboxProductStock {
     datacenter: OnlineDediboxProductDatacenter,
     stock: u32,
 }
 
+/// Used for API result deserialisation, with only interesting fields implemented
 #[derive(Deserialize)]
 struct OnlineDediboxProductDatacenter {
     name: String,
 }
 
+/// Used for API result deserialisation, with only interesting fields implemented
 #[derive(Deserialize)]
 struct OnlineDediboxProductAvailability {
     available: bool,

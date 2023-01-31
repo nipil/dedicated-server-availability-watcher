@@ -1,5 +1,7 @@
+/// Provides the implementation for IFTTT-Webhook notifiers
 #[cfg(feature = "ifttt-webhook")]
 pub mod ifttt_webhook;
+/// Provides the implementation for Simple notifiers
 #[cfg(feature = "simple")]
 pub mod simple;
 

@@ -3,6 +3,11 @@ use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::{fs, path};
 
+// Storage
+
+/// Structure to access disk storage, and store CheckResult hashes
+///
+/// path: the base directory for relative storage
 pub struct CheckResultStorage {
     path: path::PathBuf,
 }

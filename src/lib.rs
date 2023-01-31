@@ -1,5 +1,17 @@
+// TODO: #![deny(missing_docs)]
+// TODO: #[deny(missing_doc_code_examples)]
+//! This crate provides implementation and structure to query cloud 'providers'
+//! for dedicated servers inventory and availability, building `CheckResult`.
+//! It provides implementations to 'notify' about theses results, or their
+//! change compared to previous invocation.
+//! 
+//! See modules implementations for available handlers.
+
+/// Provides the implementation for CheckResult notifiers
 pub mod notifiers;
+/// Provides the implementation for CheckResult providers
 pub mod providers;
+/// Provides the implementation to store CheckResult hashes
 pub mod storage;
 
 use serde::Serialize;
@@ -97,6 +109,7 @@ pub struct CheckResult {
 }
 
 impl CheckResult {
+    /// Builds an instance with no specific sanitization
     fn new(provider_name: &str) -> Self {
         Self {
             provider_name: provider_name.to_string(),

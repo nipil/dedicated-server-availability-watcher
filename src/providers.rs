@@ -1,9 +1,12 @@
+/// Provides the implementation for the "online" provider
 #[cfg(feature = "online")]
 pub mod online;
 
+/// Provides the implementation for the "ovh" provider
 #[cfg(feature = "ovh")]
 pub mod ovh;
 
+/// Provides the implementation for the "scaleway" provider
 #[cfg(feature = "scaleway")]
 pub mod scaleway;
 

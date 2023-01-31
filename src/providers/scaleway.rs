@@ -23,16 +23,19 @@ struct ScalewayBaremetalOffers {
     offers: Vec<ScalewayBaremetalOffer>,
 }
 
+/// Used for API result deserialisation, with only interesting fields implemented
 #[derive(Deserialize, Clone)]
 struct ScalewayBaremetalOfferMemory {
     capacity: u64,
 }
 
+/// Used for API result deserialisation, with only interesting fields implemented
 #[derive(Deserialize, Clone)]
 struct ScalewayBaremetalOfferDisk {
     capacity: u64,
 }
 
+/// Used for API result deserialisation, with only interesting fields implemented
 #[derive(Deserialize, Clone)]
 struct ScalewayBaremetalOffer {
     id: String,
@@ -43,8 +46,8 @@ struct ScalewayBaremetalOffer {
     memories: Vec<ScalewayBaremetalOfferMemory>,
 }
 
-/// Helps get availability
 impl ScalewayBaremetalOffer {
+    /// Convenience function to detemine availability
     fn is_available(&self) -> bool {
         return self.enable && self.stock != "empty";
     }

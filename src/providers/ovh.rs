@@ -13,7 +13,7 @@ const ENV_NAME_OVH_EXCLUDE_DATACENTER: &str = "OVH_EXCLUDE_DATACENTER";
 /// Provider API endpoint.
 const OVH_URL: &str = "https://api.ovh.com/1.0/dedicated/server/datacenter/availabilities";
 
-/// Used for API result deserialisation.
+/// Used for API result deserialisation, with only interesting fields implemented
 #[derive(Deserialize)]
 struct OvhDedicatedServerInformation {
     datacenters: Vec<OvhDedicatedServerDatacenterAvailability>,
@@ -22,8 +22,8 @@ struct OvhDedicatedServerInformation {
     server: String,
 }
 
-/// Used for API result deserialisation.
 impl OvhDedicatedServerInformation {
+    /// Convenience function to detemine availability
     fn is_available(&self) -> bool {
         for datacenter in self.datacenters.iter() {
             if datacenter.is_available() {
@@ -34,7 +34,7 @@ impl OvhDedicatedServerInformation {
     }
 }
 
-/// Used for API result deserialisation.
+/// Used for API result deserialisation, with only interesting fields implemented
 #[derive(Deserialize)]
 struct OvhDedicatedServerDatacenterAvailability {
     availability: String,
@@ -42,7 +42,7 @@ struct OvhDedicatedServerDatacenterAvailability {
 }
 
 impl OvhDedicatedServerDatacenterAvailability {
-    /// Evaluates availability.
+    /// Convenience function to detemine availability
     fn is_available(&self) -> bool {
         match self.availability.as_str() {
             "unavailable" | "unknown" => return false,
@@ -117,8 +117,8 @@ impl Ovh {
             query.push(("server", server.into()));
         }
 
-        let client = reqwest::blocking::Client::new();
-        let response = client
+        // Actual request
+        let response = reqwest::blocking::Client::new()
             .get(OVH_URL)
             .query(&query)
             .send()
@@ -130,6 +130,7 @@ impl Ovh {
             });
         }
 
+        // Deserialization
         let results: Vec<OvhDedicatedServerInformation> = response
             .json()
             .map_err(|source| LibError::RequestError { source })?;

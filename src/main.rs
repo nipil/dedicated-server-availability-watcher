@@ -2,6 +2,8 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use dedicated_server_availability_watcher::{notifiers, providers};
 
+// CLAP command line arguments declaration
+
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
@@ -76,6 +78,7 @@ enum NotifierCommands {
     },
 }
 
+/// Main entrypoint, uses "clap" crate for argument handling
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
