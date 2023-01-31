@@ -2,6 +2,17 @@
 
 A simple CLI/daemon tool polling dedicated server availability which optionally notifies.
 
+Featured providers: 
+
+- [Online.net](https://online.net/), now known as "[Scaleway Dedibox](https://www.scaleway.com/en/dedibox/)"
+- [OVH](https://www.ovhcloud.com/), now known as "OVH Cloud"
+- [Scaleway Elastic Metal](https://www.scaleway.com/en/elastic-metal/)
+
+Featured notifiers :
+
+- [IFTTT WebHooks](https://ifttt.com/maker_webhooks) with json, or values
+- And "simple" requests (a custom URL using either GET with query parameters, or POST/PUT with json)
+
 # Sample output for each provider
 
 ## OVH
@@ -176,6 +187,7 @@ Listing available providers :
 
     $ dedicated-server-availability-watcher provider list
     Available providers:
+    - online
     - ovh
     - scaleway
 
