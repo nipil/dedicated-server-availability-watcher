@@ -12,6 +12,8 @@ pub mod notifiers;
 /// Provides the implementation for CheckResult providers
 pub mod providers;
 /// Provides the implementation to store CheckResult hashes
+/// This is not built as a feature that could be removed, as
+/// it is at the core of the differential notification scheme.
 pub mod storage;
 
 use serde::Serialize;
