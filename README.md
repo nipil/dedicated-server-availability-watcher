@@ -2,7 +2,7 @@
 
 A simple CLI/daemon tool polling dedicated server availability which optionally notifies.
 
-# sample output
+# Sample output for each provider
 
 OVH inventory :
 
@@ -25,7 +25,7 @@ OVH inventory :
     ...
     23risestorle01 (@bhs,fra,gra,lon,rbx,sbg,waw) ram-32g-ecc-2666 softraid-3x960nvme
 
-Checking for some OVH server type :
+Checking for some OVH server type (without notifier) :
 
     $ ... check ovh 22sk010 22sk020 22sk030
     22sk030
@@ -50,7 +50,7 @@ Scaleway inventory :
     c753f736-fbb4-4689-ae93-623f9d08dce5 (EM-B211X-SATA) 256G 16000G
     4635682e-a2ac-4dcd-8071-3deb051e7398 (EM-B311X-SATA) 256G 24000G
 
-Checking for some Scaleway server type :
+Checking for some Scaleway server type (without notifier) :
 
     $ ... check scaleway a5065ba4-dde2-45f3-adec-1ebbb27b766b 67ca9c9c-2f4a-447d-8d6d-7d242382a4a3
     a5065ba4-dde2-45f3-adec-1ebbb27b766b
@@ -58,6 +58,36 @@ Checking for some Scaleway server type :
     # NOTE: Here, `67ca9c9c-2f4a-447d-8d6d-7d242382a4a3` is absent because it is out of stock.
 
 See `Usage` for the actual commands.
+
+# Differential notifications using stored hashes
+
+The tool is designed to notify only if something changed when checking.
+As such, two designs are possible: a memory state and a resident daemon,
+or a run-once job triggered by cron-like tools, which store their states
+on disk. I chose the latter, and a writable *directory* must be provided.
+
+This can be done with the `--storage-dir` (or `-s`) option of the `check`
+command. Here are some example use of the storage option :
+
+    ... check AAA BBB CCC
+    # this writes states to the **working** directory. This means
+    # the directory which was in use when the binary has been invoked,
+    # and *not* the directory where the binary is stored.
+
+    ... check -s /var/cache/dsaw AAA BBB CCC
+    # will write the state hash files into the /var/cache/dsaw,
+    # provided that it actually exists **and** is writable by
+    # the user running the program.
+    # The program will **not** create the directory by itself,
+    # nor set or fix permissions.
+    # At the very least, it verifies on startup that the specified
+    # directory can be reached and is readable.
+    
+    ... chech --storage-dir /tmp
+    # will store all hash files directly in /tmp, which is crude
+    # but works, as the files are small and not many, and the
+    # only downside is that you could get spurious notifications
+    # on reboot as the /tmp directory is usually cleaned upon boot.
 
 # Compilation
 
