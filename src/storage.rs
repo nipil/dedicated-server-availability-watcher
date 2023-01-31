@@ -60,7 +60,7 @@ impl CheckResultStorage {
     ) -> Result<(), LibError> {
         let path = self.get_path(&provider_name, &servers)?;
         let available_server_hash = get_sha256_string(&check_result.available_servers)?;
-        fs::write(path, dbg!(available_server_hash)).map_err(|source| LibError::IOError { source })
+        fs::write(path, available_server_hash).map_err(|source| LibError::IOError { source })
     }
 
     /// Gets the hash of a provided provider/servers combo
@@ -92,7 +92,7 @@ impl CheckResultStorage {
         // not being able to build the file path is a problem, so we might return an Err
         let path = self.get_path(&provider_name, &servers)?;
         // handle the result of reading the file as a textual string
-        match dbg!(fs::read_to_string(path)) {
+        match fs::read_to_string(path) {
             Err(err) => match err.kind() {
                 // not being able to read the file IF IT DOES NOT EXIST is NOT a problem.
                 std::io::ErrorKind::NotFound => Ok(None),
@@ -120,7 +120,7 @@ impl CheckResultStorage {
             // otherwise, compute the current check_result and compare it to the stored one
             Some(stored_hash) => {
                 let available_server_hash =
-                    dbg!(get_sha256_string(&check_result.available_servers))?;
+                    get_sha256_string(&check_result.available_servers)?;
                 Ok(available_server_hash == stored_hash)
             }
         }
