@@ -4,7 +4,9 @@ A simple CLI/daemon tool polling dedicated server availability which optionally 
 
 # Sample output for each provider
 
-OVH inventory :
+## OVH
+
+Inventory (i removed a bunch of line here where "..." are shown) :
 
     Known servers:
     1801sk12 (@fr,gra,rbx,sbg) N/A N/A
@@ -25,14 +27,52 @@ OVH inventory :
     ...
     23risestorle01 (@bhs,fra,gra,lon,rbx,sbg,waw) ram-32g-ecc-2666 softraid-3x960nvme
 
-Checking for some OVH server type (without notifier) :
+Checking for some server type (without notifier) :
 
     $ ... check ovh 22sk010 22sk020 22sk030
     22sk030
 
     # NOTE: here, only `22sk030` is **not** out of stock
 
-Scaleway inventory :
+## Online
+
+Inventory:
+
+    Known servers:
+    24006 (Core-2-M-SATA@DC3) 192GB 3x4TB
+    ...
+    24262 (Core-3-M-SATA@DC3) 192GB 3x6TB
+    ...
+    24104 (Core-7-M-I@DC2,DC5,AMS1) 192GB 2x1.92TBSSD_NVME
+    ...
+    23981 (Pro-2-M-SATA@DC3) 32GB 2x2TB
+    ...
+    24020 (Pro-3-L-SSD-160@DC3) 96GB 2x160GBSSD
+    ...
+    21329 (Pro-7-M@DC2,DC5,AMS1) 64GB 2x960GBSSD_NVME
+    24241 (Pro-7-S@DC2,DC5,AMS1) 32GB 2x480GBSSD_NVME
+    24131 (Start-1-L@DC2,DC3) 16GB 2x1TB
+    ...
+    23997 (Start-3-S-SSD@DC5) 4GB 1x250GBSSD
+    24140 (Store-1-L@DC3) 64GB 12x4TB
+    24250 (Store-1-S@DC2,DC3) 32GB 2x4TB
+    24244 (Store-2-L@DC3,DC5) 64GB 12x4TB
+    ...
+    24254 (Store-4-L@DC3) 192GB 5x6TB
+    24191 (Store-4-M@DC3) 128GB 4x6TB
+    24011 (Store-4-XL@DC3,DC5) 96GB 24x500GBSSD
+    24033 (Store-4-XXL@DC3,DC5) 96GB 24x1TBSSD
+
+Checking for some server type (without notifier) :
+
+    $ ... check online 21321 23984 23981 24021
+    23981
+
+    # NOTE: only 23981 was **not** is out of stock.
+
+## Scaleway
+
+Inventory :
 
     Known servers:
     23bc9219-0b3a-459a-9eb6-738ebb64f3ab (EM-T510X-NVME) 1536G 20800G
@@ -50,7 +90,7 @@ Scaleway inventory :
     c753f736-fbb4-4689-ae93-623f9d08dce5 (EM-B211X-SATA) 256G 16000G
     4635682e-a2ac-4dcd-8071-3deb051e7398 (EM-B311X-SATA) 256G 24000G
 
-Checking for some Scaleway server type (without notifier) :
+Checking for some server type (without notifier) :
 
     $ ... check scaleway a5065ba4-dde2-45f3-adec-1ebbb27b766b 67ca9c9c-2f4a-447d-8d6d-7d242382a4a3
     a5065ba4-dde2-45f3-adec-1ebbb27b766b
