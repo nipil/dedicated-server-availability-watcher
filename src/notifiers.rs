@@ -1,3 +1,9 @@
+use anyhow;
+use anyhow::Context;
+use colored::Colorize;
+
+use crate::{CheckResult, LibError};
+
 /// Provides the implementation for IFTTT-Webhook notifiers
 #[cfg(feature = "ifttt-webhook")]
 pub mod ifttt_webhook;
@@ -5,10 +11,9 @@ pub mod ifttt_webhook;
 #[cfg(feature = "simple")]
 pub mod simple;
 
-use crate::{CheckResult, LibError};
-use anyhow;
-use anyhow::Context;
-use colored::Colorize;
+/// Provides the implementation for email notifiers
+#[cfg(feature = "email")]
+pub mod email;
 
 /// Defines the expected behaviour of every notifier handler.
 pub trait NotifierTrait {
@@ -48,6 +53,11 @@ static FACTORY: &[(&str, FactoryFunc)] = &[
     (
         ifttt_webhook::IFTTT_WEBHOOK_VALUES_NAME,
         ifttt_webhook::WebHookValues::from_env,
+    ),
+    #[cfg(feature = "email-sendmail")]
+    (
+        email::EMAIL_SENDMAIL_NAME,
+        email::EmailViaSendmail::from_env,
     ),
 ];
 

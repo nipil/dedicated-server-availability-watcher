@@ -7,6 +7,13 @@
 //! 
 //! See modules implementations for available handlers.
 
+use std::fmt;
+use std::fmt::Display;
+use std::{env, io};
+
+use serde::Serialize;
+use thiserror::Error;
+
 /// Provides the implementation for CheckResult notifiers
 pub mod notifiers;
 /// Provides the implementation for CheckResult providers
@@ -15,10 +22,6 @@ pub mod providers;
 /// This is not built as a feature that could be removed, as
 /// it is at the core of the differential notification scheme.
 pub mod storage;
-
-use serde::Serialize;
-use std::{env, io};
-use thiserror::Error;
 
 /// NotifierError enumerates all possible errors returned by this library.
 #[derive(Error, Debug)]
@@ -60,6 +63,11 @@ pub enum LibError {
     /// Requested provider does not exist.
     #[error("Unknown provider `{provider}` ")]
     UnknownProvider { provider: String },
+
+    /// Email error
+    #[cfg(feature = "email")]
+    #[error("Email error `{message}`")]
+    EmailError { message: String },
 }
 
 /// Utility function to get an environment variable by name and trim it
@@ -130,8 +138,26 @@ impl CheckResult {
         result
     }
 
-    // Serializes to json
+    /// Serializes to json
     fn to_json(&self) -> Result<String, LibError> {
         serde_json::to_string(&self).map_err(|source| LibError::JsonError { source })
+    }
+}
+
+impl Display for CheckResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let provider_name = &self.provider_name;
+        write!(
+            f,
+            "Report of available server types for {provider_name} :\n\n"
+        )?;
+        if self.available_servers.is_empty() {
+            write!(f, "No server available for the selected types !\n")?;
+        } else {
+            for server in &self.available_servers {
+                write!(f, "- {server}\n")?;
+            }
+        }
+        Ok(())
     }
 }
