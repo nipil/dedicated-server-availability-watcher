@@ -335,6 +335,34 @@ Define the environment variables below :
 
 Test the provider by listing its inventory.
 
+## email-sendmail
+
+First of all, we use `msmtp` as `sendmail` provider.
+See the [documentation](https://marlam.de/msmtp/documentation/) for anything related.
+How to send email using `msmtp` it outside of the scope of this document and project.
+
+You will first need to :
+
+- to build a system-wide `msmtprc` yourself
+- make sure it works : install `msmtp`, `msmtp-mta`, `mailutils` and test it using `mail`
+- and make sure the `PATH` the user runs our program has access to `sendmail`,
+  which often is located in `sbin` directories (which are not usually in
+  non-root users' `PATH`) and that is because the library used to send emails
+  only looks for `sendmail` in the provided `PATH`
+
+Then you have to provide the required information :
+
+- define an ENV `EMAIL_FROM` variable (which may be a dummy value like `a@b.c`
+  as `msmtp`may replace it by your account's email)
+- define an ENV `EMAIL_TO` to where you want the email notifications to go
+
+You can finally test it using :
+
+    dedicated-server-availability-watcher notifier test email-sendmail
+
+If everything is setup correctly (and your provider does not do stupid antispam stuff)
+then you should receive a dummy email from your program.
+
 ## ovh
 
 No environment variable is required to query this particular API endpoint.
