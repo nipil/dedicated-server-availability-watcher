@@ -148,6 +148,30 @@ Build for release :
 
 Then you will find the dedicated binary in `target/release/`
 
+# Docker
+
+Build the image :
+
+    docker build -it dsaw .
+
+Then on runtime :
+
+    # checks if if container exists    
+    docker container ls --all -f name=dsaw -q
+    
+    # if not, create container
+    docker create -it --name dsaw \
+    dsaw:latest provider check --notifier NOTIFIER_NAME PROVIDER_NAME SERVER_REF
+
+    # if you are using email-sendmail notifier, add the following options :
+    --mount type=bind,src=/etc/msmtprc,dst=/etc/msmtprc,readonly \
+    --env EMAIL_TO=target_email@example.org --env EMAIL_FROM=account_email@provider.ext \
+
+    # Then run the program (either manually, or using some sort of cron job) :
+    docker start -ai dsaw
+
+The program is not a daemon, it does a single execution then exits, preserving system resources.
+
 # Usage
 
     $ dedicated-server-availability-watcher
