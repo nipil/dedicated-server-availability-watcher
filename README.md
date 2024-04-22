@@ -2,7 +2,7 @@
 
 A simple CLI/daemon tool polling dedicated server availability which optionally notifies.
 
-Featured providers: 
+Featured providers:
 
 - [Online.net](https://online.net/), now known as "[Scaleway Dedibox](https://www.scaleway.com/en/dedibox/)"
 - [OVH](https://www.ovhcloud.com/), now known as "OVH Cloud"
@@ -134,7 +134,7 @@ command. Here are some example use of the storage option :
     # At the very least, it verifies on startup that the specified
     # directory can be reached and is readable.
     
-    ... chech --storage-dir /tmp
+    ... check --storage-dir /tmp
     # will store all hash files directly in /tmp, which is crude
     # but works, as the files are small and not many, and the
     # only downside is that you could get spurious notifications
@@ -150,27 +150,38 @@ Then you will find the dedicated binary in `target/release/`
 
 # Docker
 
-Build the image :
+Build image :
 
-    docker build -it dsaw .
+    docker build -t dsaw:latest .
 
-Then on runtime :
+The program is not a daemon, it does a single execution then exits, preserving system resources :
 
-    # checks if if container exists    
-    docker container ls --all -f name=dsaw -q
-    
-    # if not, create container
-    docker create -it --name dsaw \
-    dsaw:latest provider check --notifier NOTIFIER_NAME PROVIDER_NAME SERVER_REF
+    docker run -it --rm --name dsaw \
+    --mount type=volume,src=dsaw,dst=/home/dsaw \
+    ... ADDITIONNAL MOUNT OPTIONS ... \
+    ... ADDITIONNAL ENV VARIABLES ... \
+    dsaw:latest \
+    ... DSAW COMMAND ....
 
-    # if you are using email-sendmail notifier, add the following options :
+For example, for OVH provider, using the `email-sendmail` notifier,
+and using a working host system's `msmtp` configuration,
+and looking for the availability of an inexpensive server,
+which should not be located in Canada (see OVH section documentation) :
+
+    docker run -it --rm --name dsaw \
+    --mount type=volume,src=dsaw,dst=/home/dsaw \
     --mount type=bind,src=/etc/msmtprc,dst=/etc/msmtprc,readonly \
-    --env EMAIL_TO=target_email@example.org --env EMAIL_FROM=account_email@provider.ext \
+    --env EMAIL_TO=your.email@example.org \
+    --env EMAIL_FROM=a@b.c \
+    --env OVH_EXCLUDE_DATACENTER=ca,bhs \
+    dsaw:latest \
+    provider check --notifier email-sendmail ovh 22sk011
 
-    # Then run the program (either manually, or using some sort of cron job) :
-    docker start -ai dsaw
+Additional information :
 
-The program is not a daemon, it does a single execution then exits, preserving system resources.
+- This creates the named volume `dsaw` to store the persisted "latest" state.
+- This volume _will not be removed on exit_, so subsequent runs do not notify every time
+- There is a very low quantity of information stored in this volume, and only two accesses per run.
 
 # Usage
 
@@ -199,6 +210,7 @@ Listing available notifiers :
     - simple-get
     - simple-post
     - simple-put
+    - email-sendmail
 
 Testing that a notifier works :
 
@@ -297,7 +309,7 @@ Then visit [IFTTT applets](https://ifttt.com/my_applets) and :
 - where you want it to appear, click `Add ingredient` and select `JsonPayload`
 - click `create action`, then `continue` then `finish`
 
-Install the IFTTT smarthone app and login using your user account
+Install the IFTTT smartphone app and login using your user account
 
 Define the environment variables below :
 
@@ -308,7 +320,8 @@ Test the notifier, you should get a notification.
 
 The provided `JsonPayload` is the same as the one described in `simple-post`.
 
-**INFO**: to delete an applet, visit the [difficult-to-find  page on IFTTT](https://ifttt.com/p/username/applets/private).
+**INFO**: to delete an applet, visit
+the [difficult-to-find  page on IFTTT](https://ifttt.com/p/username/applets/private).
 
 ## ifttt-webhook-values
 
@@ -331,7 +344,8 @@ Define the environment variables below :
     SCALEWAY_SECRET_KEY="your_api_key"
     SCALEWAY_BAREMETAL_ZONES="fr-par-1,fr-par-2,nl-ams-1"
 
-**INFO**: the zones variable is a comma `,` separated list of identifiers found in the [official API documentation](https://developers.scaleway.com/en/products/baremetal/api/)
+**INFO**: the zones variable is a comma `,` separated list of identifiers found in
+the [official API documentation](https://developers.scaleway.com/en/products/baremetal/api/)
 
 Test the provider by listing its inventory.
 
@@ -378,6 +392,8 @@ Where each value in the comma separated list will exclude :
 - a specific datacenter (`rbx`, `sbg`, `gra`, `bhs` ...)
 - the country of the datacenter (`fr`, `ca`, ...)
 
-**WARNING**: excluding a country does not actually exclude its datacenters, you have to exclude both. That is strange, but that is how their api works. And as i have found no API entrypoint to list datacenters or country, i cannot separate both types to filter them out automatically.
+**WARNING**: excluding a country does not actually exclude its datacenters, you have to exclude both. That is strange,
+but that is how their api works. And as i have found no API entrypoint to list datacenters or country, i cannot separate
+both types to filter them out automatically.
 
 And you can explore the [official API](https://api.ovh.com/console/) and create an account if needed.
