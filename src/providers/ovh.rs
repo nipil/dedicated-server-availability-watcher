@@ -173,20 +173,8 @@ impl ProviderTrait for Ovh {
 
     /// Checks provider for the availability of a given server type.
     fn check(&self, server: &str) -> Result<bool, LibError> {
-        let mut results = self.api_get_dedicated_server_datacenter_availabilities(Some(server))?;
-
-        match results.pop() {
-            None => Err(LibError::UnknownServer {
-                server: server.to_string(),
-            }),
-            Some(result) => {
-                results
-                    .is_empty()
-                    .then_some(result.is_available())
-                    .ok_or(LibError::ApiError {
-                        message: format!("Multiple references found for server {server}"),
-                    })
-            }
-        }
+        let results = self.api_get_dedicated_server_datacenter_availabilities(Some(server))?;
+        // Server ids can have duplicates (location, specs, ...)
+        Ok(!results.is_empty())
     }
 }
