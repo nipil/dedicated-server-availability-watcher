@@ -1,0 +1,5 @@
+# Cargo stuff
+target/
+
+# hashes for checkresult storage
+*.sha256
