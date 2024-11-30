@@ -1,4 +1,4 @@
-FROM rust:bookworm as build
+FROM rust:bookworm AS build
 
 ARG user=dsaw
 RUN useradd -m $user
@@ -8,7 +8,7 @@ WORKDIR /home/$user
 COPY --chown=$user . .
 RUN cargo install --path .
 
-FROM debian:bookworm-slim as final
+FROM debian:bookworm-slim AS final
 
 RUN apt-get update && \
     apt-get install -y msmtp msmtp-mta mailutils openssl ca-certificates && \
