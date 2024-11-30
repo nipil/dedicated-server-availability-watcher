@@ -175,6 +175,11 @@ impl ProviderTrait for Ovh {
     fn check(&self, server: &str) -> Result<bool, LibError> {
         let results = self.api_get_dedicated_server_datacenter_availabilities(Some(server))?;
         // Server ids can have duplicates (location, specs, ...)
-        Ok(!results.is_empty())
+        for result in results {
+            if result.is_available() {
+                return Ok(true)
+            }
+        }
+        Ok(false)
     }
 }
