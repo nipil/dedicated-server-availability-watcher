@@ -183,6 +183,10 @@ Additional information :
 - This volume _will not be removed on exit_, so subsequent runs do not notify every time
 - There is a very low quantity of information stored in this volume, and only two accesses per run.
 
+Published image on Docker Hub :
+
+    nipil/dsaw:latest
+
 # Usage
 
     $ dedicated-server-availability-watcher
