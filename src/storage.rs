@@ -119,8 +119,7 @@ impl CheckResultStorage {
             None => Ok(false),
             // otherwise, compute the current check_result and compare it to the stored one
             Some(stored_hash) => {
-                let available_server_hash =
-                    get_sha256_string(&check_result.available_servers)?;
+                let available_server_hash = get_sha256_string(&check_result.available_servers)?;
                 Ok(available_server_hash == stored_hash)
             }
         }

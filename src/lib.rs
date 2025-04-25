@@ -4,7 +4,7 @@
 //! for dedicated servers inventory and availability, building `CheckResult`.
 //! It provides implementations to 'notify' about theses results, or their
 //! change compared to previous invocation.
-//! 
+//!
 //! See modules implementations for available handlers.
 
 use std::fmt;

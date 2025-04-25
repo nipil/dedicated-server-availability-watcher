@@ -177,7 +177,7 @@ impl ProviderTrait for Ovh {
         // Server ids can have duplicates (location, specs, ...)
         for result in results {
             if result.is_available() {
-                return Ok(true)
+                return Ok(true);
             }
         }
         Ok(false)
