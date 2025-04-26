@@ -133,7 +133,7 @@ command. Here are some example use of the storage option :
     # nor set or fix permissions.
     # At the very least, it verifies on startup that the specified
     # directory can be reached and is readable.
-    
+
     ... check --storage-dir /tmp
     # will store all hash files directly in /tmp, which is crude
     # but works, as the files are small and not many, and the
@@ -149,6 +149,9 @@ Build for release :
 Then you will find the dedicated binary in `target/release/`
 
 # Docker
+
+**IMPORTANT**: the "official" container image is a "**distro-less**" image.
+It does not have a shell and lacks a package manager to install additional software.
 
 Build image :
 
@@ -373,8 +376,12 @@ then you should receive a dummy email from your program.
 
 ## email-sendmail
 
-First of all, we use `msmtp` as `sendmail` provider.
-See the [documentation](https://marlam.de/msmtp/documentation/) for anything related.
+**Note** : As the docker image is a "distro-less", if you REALLY want to use the `email-sendmail` notifier
+(instead of `email-smtp`) and want to use Containers, you must change the secondary image to a "usual" image,
+like `debian:stable`, then customize and build your own image.
+
+So if you want to proceed, you can then (for example) use `msmtp` as `sendmail` provider.
+See the [documentation](https://marlam.de/msmtp/documentation/) for anything related.\
 How to send email using `msmtp` is outside the scope of this document and project.
 
 You will first need to :
@@ -419,3 +426,78 @@ but that is how their api works. And as I have found no API entrypoint to list d
 both types to filter them out automatically.
 
 And you can explore the [official API](https://api.ovh.com/console/) and create an account if needed.
+
+# DEV security
+
+Bill of material
+
+    cargo auditable build --release
+
+    cargo audit bin .\target\release\dedicated-server-availability-watcher.exe
+
+      Fetching advisory database from `https://github.com/RustSec/advisory-db.git`
+        Loaded 752 security advisories (from C:\Users\nicol\.cargo\advisory-db)
+      Updating crates.io index
+         Found 'cargo auditable' data in .\target\release\dedicated-server-availability-watcher.exe (181 dependencies)
+
+Dependency management
+
+    cargo outdated
+
+      Name              Project  Compat  Latest  Kind    Platform
+      ----              -------  ------  ------  ----    --------
+      chumsky->stacker  0.1.20   0.1.21  0.1.21  Normal  ---
+      stacker->psm      0.1.25   0.1.26  0.1.26  Normal  ---
+
+Statistic about "unsafe" code
+
+    cargo geiger
+
+      Metric output format: x/y
+      x = unsafe code used by the build
+      y = total unsafe code found in the crate
+
+      Symbols:
+      :) = No `unsafe` usage found, declares #![forbid(unsafe_code)]
+      ?  = No `unsafe` usage found, missing #![forbid(unsafe_code)]
+      !  = `unsafe` usage found
+
+      Functions  Expressions  Impls  Traits  Methods  Dependency
+
+      0/0        0/0          0/0    0/0     0/0      ?  dedicated-server-availability-watcher 0.11.0
+      16/19      464/470      3/3    0/0     12/12    !  ├── anyhow 1.0.98
+      ...
+      0/0        0/0          0/0    0/0     0/0      ?  ├── clap 4.5.37
+      0/0        0/0          0/0    0/0     0/0      :) │   ├── clap_builder 4.5.37
+      1/1        7/7          0/0    0/0     0/0      !  │   │   ├── anstream 0.6.18
+      ...
+      0/24       0/1004       0/10   0/0     0/5      ?  │   │   ├── backtrace 0.3.74
+      1/1        15/15        0/0    0/0     0/0      !  │   │   ├── clap_lex 0.7.4
+      ...
+      1/1        162/162      10/10  0/0     2/2      !  ├── http 1.3.1
+      41/41      813/867      12/14  1/1     16/20    !  │   ├── bytes 1.10.1
+      0/0        5/5          0/0    0/0     0/0      !  │   │   └── serde 1.0.219
+      ...
+      0/0        0/0          0/0    0/0     0/0      :) │   ├── email-encoding 0.4.1
+      0/0        0/0          0/0    0/0     0/0      :) │   │   ├── base64 0.22.1
+      27/41      1973/2421    2/2    0/0     109/147  !  │   │   └── memchr 2.7.4
+      2/2        18/18        1/1    0/0     0/0      !  │   │       └── log 0.4.27
+      0/0        5/5          0/0    0/0     0/0      !  │   │           └── serde 1.0.219
+      ...
+      180/384    17545/23226  403/465 36/37   615/800
+
+Supply-chain
+
+    cargo supply-chain publishers
+
+      The following individuals can publish updates for your dependencies:
+      1. taiki-e via crates: async-lock, async-process, async-signal, async-task, atomic-waker, blocking, concurrent-queue, crossbeam-utils, event-listener, fastrand, futures-channel, futures-core, futures-io, futures-lite, futures-sink, futures-task, futures-util, parking, pin-project-lite, piper, polling
+      2. alexcrichton via crates: backtrace, bumpalo, cfg-if, futures-io, gloo-timers, js-sys, openssl-probe, openssl-sys, wasi, wasm-bindgen, wasm-bindgen-backend, wasm-bindgen-futures, wasm-bindgen-macro, wasm-bindgen-macro-support, wasm-bindgen-shared, web-sys, wit-bindgen-rt
+      ...
+      117. zesterer via crates: chumsky
+
+      All members of the following teams can publish updates for your dependencies:
+      1. "github:unicode-org:icu4x-release" (https://github.com/unicode-org) via crates: icu_collections, icu_locid, icu_locid_transform, icu_locid_transform_data, icu_normalizer, icu_normalizer_data, icu_properties, icu_properties_data, icu_provider, icu_provider_macros, litemap, tinystr, writeable, yoke, yoke-derive, zerofrom, zerofrom-derive, zerovec, zerovec-derive
+      2. "github:smol-rs:admins" (https://github.com/smol-rs) via crates: async-channel, async-executor, async-global-executor, async-io, async-lock, async-process, async-signal, async-task, atomic-waker, blocking, concurrent-queue, event-listener, event-listener-strategy, fastrand, futures-lite, parking, piper, polling
+      ...
+      37. "github:uuid-rs:uuid" (https://github.com/uuid-rs) via crates: uuid
