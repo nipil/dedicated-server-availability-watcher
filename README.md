@@ -358,7 +358,13 @@ Test the provider by listing its inventory.
 
 ## email-smtp
 
-You will first need to :
+**IMPORTANT**: to use Oauth-authenticated services like Gmail, you must first generate a "legacy application password"
+
+- First, see the dedicated page from Google : https://support.google.com/mail/answer/185833
+- Then create an application password https://myaccount.google.com/apppasswords
+- And use your email as username and the generated application secret as password for configuration
+
+Finally, you will need to set up environment variables :
 
 - define an ENV `EMAIL_FROM` variable (account's email)
 - define an ENV `EMAIL_TO` variable (where you want the email notifications to go)
