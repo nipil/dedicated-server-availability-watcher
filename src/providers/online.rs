@@ -1,8 +1,8 @@
 use super::{ProviderFactoryTrait, ProviderTrait, ServerInfo};
-use crate::LibError;
+use crate::{Authentication, LibError};
 use array_tool::vec::Intersect;
 use http::Method;
-use reqwest::blocking::{Client, RequestBuilder, Response};
+use reqwest::blocking::Response;
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -27,14 +27,14 @@ struct OnlineDediboxProduct {
 }
 
 impl OnlineDediboxProduct {
-    /// Convenience function to detemine availability
+    /// Convenience function to determine availability
     fn is_available(&self) -> bool {
         for stock in self.stocks.iter() {
             if stock.stock > 0 {
                 return true;
             }
         }
-        return false;
+        false
     }
 }
 
@@ -66,7 +66,7 @@ struct OnlineDediboxProductAvailability {
     datacenters: Vec<OnlineDediboxProductDatacenter>,
 }
 
-// I prefer the From trait, as i can pass references
+// I prefer the From trait, as I can pass references
 impl From<&OnlineDediboxProduct> for ServerInfo {
     /// Extracts only interesting information which is common to all providers
     fn from(product: &OnlineDediboxProduct) -> Self {
@@ -126,13 +126,6 @@ impl Online {
         })
     }
 
-    /// Wrapper for automatic handling of authentication
-    fn create_authenticated_request_builder(&self, method: Method, url: &str) -> RequestBuilder {
-        Client::new()
-            .request(method, url)
-            .header("Authorization", format!("Bearer {}", &self.api_token))
-    }
-
     /// Fallback error handler for queries
     fn do_error_if_not_successful(response: &Response) -> Result<(), LibError> {
         if response.status().is_success() {
@@ -149,10 +142,13 @@ impl Online {
 
     /// Executes simple authenticated get queries which fails only on transport errors
     fn get_api_authenticated(&self, url: &str) -> Result<Response, LibError> {
-        let response = self
-            .create_authenticated_request_builder(Method::GET, url)
-            .send()
-            .map_err(|source| LibError::RequestError { source })?;
+        let response = crate::create_authenticated_request_builder(
+            Method::GET,
+            url,
+            Authentication::bearer_token(&self.api_token),
+        )
+        .send()
+        .map_err(|source| LibError::RequestError { source })?;
 
         Ok(response)
     }
@@ -160,7 +156,7 @@ impl Online {
     // Extract the enum value from a serde_json Value::Object variant
     fn extract_serde_value_object_variant_value(
         name: &str,
-        value: serde_json::Value,
+        value: Value,
     ) -> Result<serde_json::Map<String, Value>, LibError> {
         match value {
             Value::Object(value) => Ok(value),
@@ -170,7 +166,7 @@ impl Online {
         }
     }
 
-    /// Gets all plans, with produc ranges and actual products
+    /// Gets all plans, with product ranges and actual products
     fn get_plans(&self) -> Result<Vec<OnlineDediboxProduct>, LibError> {
         let url = "https://api.online.net/api/v1/dedibox/plans";
         let response = self.get_api_authenticated(&url)?;
@@ -240,7 +236,7 @@ impl ProviderFactoryTrait for Online {
 impl ProviderTrait for Online {
     /// Gets the actual name of the provider.
     fn name(&self) -> &'static str {
-        return ONLINE_NAME;
+        ONLINE_NAME
     }
 
     /// Collects provider inventory.

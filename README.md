@@ -17,7 +17,7 @@ Featured notifiers :
 
 ## OVH
 
-Inventory (i removed a bunch of line here where "..." are shown) :
+Inventory (I removed a bunch of line here where "..." are shown) :
 
     Known servers:
     1801sk12 (@fr,gra,rbx,sbg) N/A N/A
@@ -309,7 +309,7 @@ Then visit [IFTTT applets](https://ifttt.com/my_applets) and :
 - enter an `event name` and take note of it, then click `create`,
 - click `then that`
 - select `notifications` for example and click `Send a notification from the IFTTT app`
-- design the message as you want it, adding text ..
+- design the message as you want it, adding text
 - where you want it to appear, click `Add ingredient` and select `JsonPayload`
 - click `create action`, then `continue` then `finish`
 
@@ -353,11 +353,29 @@ the [official API documentation](https://developers.scaleway.com/en/products/bar
 
 Test the provider by listing its inventory.
 
+## email-smtp
+
+You will first need to :
+
+- define an ENV `EMAIL_FROM` variable (account's email)
+- define an ENV `EMAIL_TO` variable (where you want the email notifications to go)
+- define an ENV `EMAIL_SMTP_HOST` variable (DNS hostname for your provider SMTP relay)
+- define an ENV `EMAIL_SMTP_PORT` variable (`465` for native TLS, `587` for Submission over STARTTLS, same for `25`)
+- define an ENV `EMAIL_SMTP_USER` variable (which usually is your authenticated user account from your provider)
+- define an ENV `EMAIL_SMTP_PASSWORD` variable (which holds the secret for the authentication method)
+
+You can finally test it using :
+
+    dedicated-server-availability-watcher notifier test email-smtp
+
+If everything is set up correctly (and your provider does not do stupid antispam stuff)
+then you should receive a dummy email from your program.
+
 ## email-sendmail
 
 First of all, we use `msmtp` as `sendmail` provider.
 See the [documentation](https://marlam.de/msmtp/documentation/) for anything related.
-How to send email using `msmtp` it outside of the scope of this document and project.
+How to send email using `msmtp` is outside the scope of this document and project.
 
 You will first need to :
 
@@ -378,7 +396,7 @@ You can finally test it using :
 
     dedicated-server-availability-watcher notifier test email-sendmail
 
-If everything is setup correctly (and your provider does not do stupid antispam stuff)
+If everything is set up correctly (and your provider does not do stupid antispam stuff)
 then you should receive a dummy email from your program.
 
 ## ovh
@@ -397,7 +415,7 @@ Where each value in the comma separated list will exclude :
 - the country of the datacenter (`fr`, `ca`, ...)
 
 **WARNING**: excluding a country does not actually exclude its datacenters, you have to exclude both. That is strange,
-but that is how their api works. And as i have found no API entrypoint to list datacenters or country, i cannot separate
+but that is how their api works. And as I have found no API entrypoint to list datacenters or country, I cannot separate
 both types to filter them out automatically.
 
 And you can explore the [official API](https://api.ovh.com/console/) and create an account if needed.

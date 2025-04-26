@@ -2,16 +2,17 @@
 // TODO: #[deny(missing_doc_code_examples)]
 //! This crate provides implementation and structure to query cloud 'providers'
 //! for dedicated servers inventory and availability, building `CheckResult`.
-//! It provides implementations to 'notify' about theses results, or their
+//! It provides implementations to 'notify' about these results, or their
 //! change compared to previous invocation.
 //!
 //! See modules implementations for available handlers.
 
+use http::Method;
+use reqwest::blocking::{Client, RequestBuilder};
+use serde::Serialize;
 use std::fmt;
 use std::fmt::Display;
 use std::{env, io};
-
-use serde::Serialize;
 use thiserror::Error;
 
 /// Provides the implementation for CheckResult notifiers
@@ -43,7 +44,7 @@ pub enum LibError {
     #[error("Network error")]
     RequestError { source: reqwest::Error },
 
-    /// Anything which happen on the logical request (ie. network is ok).
+    /// Anything which happen on the logical request (i.e. network is ok).
     #[error("API error `{message}`")]
     ApiError { message: String },
 
@@ -55,7 +56,7 @@ pub enum LibError {
     #[error("Unknown server `{server}`")]
     UnknownServer { server: String },
 
-    // non existing handlers.
+    // non-existing handlers.
     /// Requested notifier does not exist.
     #[error("Unknown notifier `{notifier}`")]
     UnknownNotifier { notifier: String },
@@ -80,7 +81,7 @@ pub fn get_env_var(name: &str) -> Result<String, LibError> {
         })
 }
 
-/// Same as above, but as an option instead of an result
+/// Same as above, but as an option instead of a result
 pub fn get_env_var_option(name: &str) -> Option<String> {
     get_env_var(name).map_or_else(|_| None, |o| Some(o))
 }
@@ -107,6 +108,39 @@ pub fn tokenize_optional_csv_str(csv: &Option<String>) -> Result<Vec<String>, Li
         }
         None => Vec::new(),
     })
+}
+
+/// Wrapper for automatic handling of authentication
+struct Authentication {
+    header: String,
+    value: String,
+}
+
+impl Authentication {
+    fn x_auth_token(secret: &str) -> Self {
+        Self {
+            header: "X-Auth-Token".to_string(),
+            value: secret.to_string(),
+        }
+    }
+
+    fn bearer_token(secret: &str) -> Self {
+        Self {
+            header: "Authorization".to_string(),
+            value: format!("Bearer {}", secret),
+        }
+    }
+}
+
+/// Wrapper for automatic handling of authentication
+fn create_authenticated_request_builder(
+    method: Method,
+    url: &str,
+    auth: Authentication,
+) -> RequestBuilder {
+    Client::new()
+        .request(method, url)
+        .header(auth.header, auth.value)
 }
 
 /// CheckResult holds the data between providers and notifiers :

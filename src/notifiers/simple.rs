@@ -77,10 +77,10 @@ impl SimpleGet {
 impl NotifierTrait for SimpleGet {
     /// Gets the actual name of the notifier.
     fn name(&self) -> &'static str {
-        return SIMPLE_GET_NAME;
+        SIMPLE_GET_NAME
     }
 
-    /// Sends an notification using the provided data.
+    /// Sends a notification using the provided data.
     fn notify(&self, result: &CheckResult) -> Result<(), LibError> {
         let params = self.build_query_parameters(result);
         let builder = Client::new().get(&self.url).query(&params);
@@ -110,10 +110,10 @@ impl NotifierFactoryTrait for SimplePost {
 impl NotifierTrait for SimplePost {
     /// Gets the actual name of the notifier.
     fn name(&self) -> &'static str {
-        return SIMPLE_POST_NAME;
+        SIMPLE_POST_NAME
     }
 
-    /// Sends an notification using the provided data.
+    /// Sends a notification using the provided data.
     fn notify(&self, result: &CheckResult) -> Result<(), LibError> {
         let json = result.to_json()?;
         let builder = Client::new().post(&self.url).body(json);
@@ -143,10 +143,10 @@ impl NotifierFactoryTrait for SimplePut {
 impl NotifierTrait for SimplePut {
     /// Gets the actual name of the notifier.
     fn name(&self) -> &'static str {
-        return SIMPLE_PUT_NAME;
+        SIMPLE_PUT_NAME
     }
 
-    /// Sends an notification using the provided data.
+    /// Sends a notification using the provided data.
     fn notify(&self, result: &CheckResult) -> Result<(), LibError> {
         let json = result.to_json()?;
         let builder = Client::new().put(&self.url).body(json);

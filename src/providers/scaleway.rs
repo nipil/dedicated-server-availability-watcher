@@ -1,7 +1,7 @@
 use super::{ProviderFactoryTrait, ProviderTrait, ServerInfo};
-use crate::LibError;
+use crate::{Authentication, LibError};
 use http::{Method, StatusCode};
-use reqwest::blocking::{Client, RequestBuilder, Response};
+use reqwest::blocking::Response;
 use serde::Deserialize;
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -47,13 +47,13 @@ struct ScalewayBaremetalOffer {
 }
 
 impl ScalewayBaremetalOffer {
-    /// Convenience function to detemine availability
+    /// Convenience function to determine availability
     fn is_available(&self) -> bool {
-        return self.enable && self.stock != "empty";
+        self.enable && self.stock != "empty"
     }
 }
 
-// I prefer the From trait, as i can pass references
+// I prefer the From trait, as I can pass references
 impl From<&ScalewayBaremetalOffer> for ServerInfo {
     /// Extracts only interesting information which is common to all providers
     fn from(offer: &ScalewayBaremetalOffer) -> Self {
@@ -98,13 +98,6 @@ impl Scaleway {
         Ok(Self { secret_key, zones })
     }
 
-    /// Wrapper for automatic handling of authentication
-    fn create_authenticated_request_builder(&self, method: Method, url: &str) -> RequestBuilder {
-        Client::new()
-            .request(method, url)
-            .header("X-Auth-Token", &self.secret_key)
-    }
-
     /// Fallback error handler for queries
     fn do_error_if_not_successful(response: &Response) -> Result<(), LibError> {
         if response.status().is_success() {
@@ -121,10 +114,13 @@ impl Scaleway {
 
     /// Executes simple authenticated get queries which fails only on transport errors
     fn get_api_authenticated(&self, url: &str) -> Result<Response, LibError> {
-        let response = self
-            .create_authenticated_request_builder(Method::GET, url)
-            .send()
-            .map_err(|source| LibError::RequestError { source })?;
+        let response = crate::create_authenticated_request_builder(
+            Method::GET,
+            url,
+            Authentication::x_auth_token(&self.secret_key),
+        )
+        .send()
+        .map_err(|source| LibError::RequestError { source })?;
 
         Ok(response)
     }
@@ -224,7 +220,7 @@ impl Scaleway {
             }
         }
 
-        // We could have return an Option if on offer was found.
+        // We could have returned an Option if on offer was found.
         // By choice, we chose to produce an error in that case.
         result.ok_or(LibError::UnknownServer {
             server: offer_id.to_string(),
@@ -244,7 +240,7 @@ impl ProviderFactoryTrait for Scaleway {
 impl ProviderTrait for Scaleway {
     /// Gets the actual name of the provider.
     fn name(&self) -> &'static str {
-        return SCALEWAY_NAME;
+        SCALEWAY_NAME
     }
 
     /// Collects provider inventory.

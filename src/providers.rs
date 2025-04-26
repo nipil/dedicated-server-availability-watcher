@@ -76,13 +76,6 @@ impl Factory {
             })?;
         factory()
     }
-
-    /// Provides a list of all known provider types.
-    pub fn get_available() -> Vec<&'static str> {
-        let mut names: Vec<&'static str> = FACTORY.iter().map(|&(name, _)| name).collect();
-        names.sort();
-        names
-    }
 }
 
 // Runners: included in the library so they can be tested.
@@ -112,8 +105,7 @@ impl Runner {
     fn build_storage(storage_dir: &Option<String>) -> anyhow::Result<CheckResultStorage> {
         let path = match storage_dir {
             Some(dir) => path::Path::new(&dir).to_path_buf(),
-            None => env::current_dir()
-                .with_context(|| format!("Current directory is not accessible"))?,
+            None => env::current_dir().with_context(|| "Current directory is not accessible")?,
         };
         Ok(CheckResultStorage::new(&path).context("while initializing CheckResultStorage")?)
     }
@@ -145,8 +137,10 @@ pub struct ListRunner;
 impl ListRunner {
     /// Prints all available providers.
     pub fn print_list() {
+        let mut names: Vec<&'static str> = FACTORY.iter().map(|&(name, _)| name).collect();
+        names.sort();
         println!("Available providers:");
-        for provider in Factory::get_available().iter() {
+        for provider in names {
             println!("- {}", provider.green());
         }
     }

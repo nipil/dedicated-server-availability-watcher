@@ -46,7 +46,7 @@ impl WebHookParameters {
     fn new(event: &str, key: &str) -> Result<Self, LibError> {
         // Could not sanitize IFTTT input better, as they don't even follow their own spec:
         // webhook even says to use only letters, numbers and underscored, but it actually
-        // allows - and # ... So i do not even try to sanitize.
+        // allows - and # ... So I do not even try to sanitize.
         let event = event.to_string();
         if event.is_empty() {
             return Err(LibError::ValueError {
@@ -55,9 +55,9 @@ impl WebHookParameters {
             });
         }
 
-        // Could not sanitize IFTTT input better, as i have not found their key spec:
+        // Could not sanitize IFTTT input better, as I have not found their key spec:
         // it seems to be 22 character of letters and numbers, but why risk a future
-        // locking false positive trigger ? So again, i will not even try.
+        // locking false positive trigger ? So again, I will not even try.
         let key = key.to_string();
         if key.is_empty() {
             return Err(LibError::ValueError {
@@ -104,9 +104,9 @@ trait WebHookPoster {
         }
 
         // Unhandled unknown errors.
-        return Err(LibError::ApiError {
+        Err(LibError::ApiError {
             message: "Unknown IFTTT-WEBHOOK error".to_string(),
-        });
+        })
     }
 }
 
@@ -140,10 +140,10 @@ impl NotifierFactoryTrait for WebHookJson {
 impl NotifierTrait for WebHookJson {
     /// Gets the actual name of the notifier.
     fn name(&self) -> &'static str {
-        return IFTTT_WEBHOOK_JSON_NAME;
+        IFTTT_WEBHOOK_JSON_NAME
     }
 
-    /// Sends an notification using the provided data.
+    /// Sends a notification using the provided data.
     fn notify(&self, result: &CheckResult) -> Result<(), LibError> {
         let body = result.to_json()?;
         // we are not interested in the actual payload of the reply
@@ -203,10 +203,10 @@ impl NotifierFactoryTrait for WebHookValues {
 impl NotifierTrait for WebHookValues {
     /// Gets the actual name of the notifier.
     fn name(&self) -> &'static str {
-        return IFTTT_WEBHOOK_VALUES_NAME;
+        IFTTT_WEBHOOK_VALUES_NAME
     }
 
-    /// Sends an notification using the provided data.
+    /// Sends a notification using the provided data.
     fn notify(&self, result: &CheckResult) -> Result<(), LibError> {
         let body = self.build_body("value1", "value2", result)?;
         // we are not interested in the actual payload of the reply

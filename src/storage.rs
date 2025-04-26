@@ -76,20 +76,12 @@ impl CheckResultStorage {
     /// Returns None if the file was simply not found
     ///
     /// Returns Some(String) if a string has been read successfully from the file
-    ///
-    /// Example:
-    /// ```
-    /// match self.get_check_result_hash(provider_name, servers)? { // Err on critical
-    ///   None => Ok(false),                                        // file not found
-    ///   Some(stored_hash) => Ok(true),                            // string read and trimmed
-    /// }
-    /// ```
     pub fn get_hash(
         &self,
         provider_name: &str,
         servers: &Vec<String>,
     ) -> Result<Option<String>, LibError> {
-        // not being able to build the file path is a problem, so we might return an Err
+        // not being able to build the file path is a problem, so we might return an error
         let path = self.get_path(&provider_name, &servers)?;
         // handle the result of reading the file as a textual string
         match fs::read_to_string(path) {
@@ -105,7 +97,7 @@ impl CheckResultStorage {
     }
 
     /// Compares the provided check_result by building its hash and comparing to the one stored
-    /// Its error behaviour is the same as `get_check_result_hash()`
+    /// Its error behaviour is the same as `get_hash()`
     pub fn is_equal(
         &self,
         provider_name: &str,

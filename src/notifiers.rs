@@ -27,7 +27,7 @@ pub trait NotifierTrait {
     fn test(&self) -> Result<(), LibError>;
 }
 
-/// Defines the expected behaviour for builing the desired notifier.
+/// Defines the expected behaviour for building the desired notifier.
 pub trait NotifierFactoryTrait {
     /// Builds a notifier from environment variables.
     fn from_env() -> Result<Box<dyn NotifierTrait>, LibError>;
@@ -59,6 +59,8 @@ static FACTORY: &[(&str, FactoryFunc)] = &[
         email::EMAIL_SENDMAIL_NAME,
         email::EmailViaSendmail::from_env,
     ),
+    #[cfg(feature = "email-smtp")]
+    (email::EMAIL_SMTP_NAME, email::EmailViaSmtp::from_env),
 ];
 
 /// Trait to help create notifiers.
@@ -76,13 +78,6 @@ impl Factory {
             })?;
         factory()
     }
-
-    /// Provides a list of all known notifier types.
-    pub fn get_available() -> Vec<&'static str> {
-        let mut names: Vec<&'static str> = FACTORY.iter().map(|&(name, _)| name).collect();
-        names.sort();
-        names
-    }
 }
 
 // Runners: included in the library so it can be tested.
@@ -92,14 +87,16 @@ pub struct ListRunner;
 
 impl ListRunner {
     /// Prints all available notifiers.
-    pub fn print_list() -> anyhow::Result<()> {
+    pub fn print_list() {
+        let mut names: Vec<&'static str> = FACTORY.iter().map(|&(name, _)| name).collect();
+        names.sort();
         println!("Available notifiers:");
-        for notifier in Factory::get_available().iter() {
+        for notifier in names {
             println!("- {}", notifier.green());
         }
-        Ok(())
     }
 }
+
 /// Implementation of the ListRunner
 pub struct TestRunner {
     notifier: Box<dyn NotifierTrait>,

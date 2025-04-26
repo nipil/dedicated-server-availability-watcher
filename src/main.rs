@@ -80,10 +80,10 @@ fn main() -> Result<()> {
     match &cli.command {
         // Notifier actions
         Commands::Notifier { subcommand } => match subcommand {
-            None => notifiers::ListRunner::print_list()?,
+            None => notifiers::ListRunner::print_list(),
 
             Some(sub) => match sub {
-                NotifierCommands::List {} => notifiers::ListRunner::print_list()?,
+                NotifierCommands::List {} => notifiers::ListRunner::print_list(),
 
                 NotifierCommands::Test { notifier } => {
                     notifiers::TestRunner::new(notifier)?.test()?

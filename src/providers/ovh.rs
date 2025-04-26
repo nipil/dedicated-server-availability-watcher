@@ -23,14 +23,14 @@ struct OvhDedicatedServerInformation {
 }
 
 impl OvhDedicatedServerInformation {
-    /// Convenience function to detemine availability
+    /// Convenience function to determine availability
     fn is_available(&self) -> bool {
         for datacenter in self.datacenters.iter() {
             if datacenter.is_available() {
                 return true;
             }
         }
-        return false;
+        false
     }
 }
 
@@ -42,16 +42,16 @@ struct OvhDedicatedServerDatacenterAvailability {
 }
 
 impl OvhDedicatedServerDatacenterAvailability {
-    /// Convenience function to detemine availability
+    /// Convenience function to determine availability
     fn is_available(&self) -> bool {
         match self.availability.as_str() {
-            "unavailable" | "unknown" => return false,
-            _ => return true,
+            "unavailable" | "unknown" => false,
+            _ => true,
         }
     }
 }
 
-// I prefer the Frommkdir  trait, as i can pass references
+// I prefer the From trait, as I can pass references
 impl From<&OvhDedicatedServerInformation> for ServerInfo {
     /// Extracts only interesting information which is common to all providers
     fn from(info: &OvhDedicatedServerInformation) -> Self {
@@ -150,7 +150,7 @@ impl ProviderFactoryTrait for Ovh {
 impl ProviderTrait for Ovh {
     /// Gets the actual name of the provider.
     fn name(&self) -> &'static str {
-        return OVH_NAME;
+        OVH_NAME
     }
 
     /// Collects provider inventory.
