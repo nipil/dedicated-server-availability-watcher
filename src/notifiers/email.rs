@@ -69,7 +69,7 @@ impl EmailViaSendmail {
 impl NotifierFactoryTrait for EmailViaSendmail {
     /// Builds a EmailViaSendmail notifier from environment variables.
     fn from_env() -> Result<Box<dyn NotifierTrait>, LibError> {
-        Ok(Box::new(EmailViaSendmail {}))
+        Ok(Box::new(Self {}))
     }
 }
 
@@ -115,7 +115,7 @@ impl EmailViaSmtp {
                 return Err(ValueError {
                     name: ENV_EMAIL_SMTP_PORT.to_string(),
                     value: format!("Unknown STARTTLS or TLS from port {}", self.port),
-                })
+                });
             }
         }
         .map_err(|e| EmailError {
@@ -163,7 +163,7 @@ impl NotifierFactoryTrait for EmailViaSmtp {
         })?;
         let user = crate::get_env_var(ENV_EMAIL_SMTP_USER)?;
         let password = crate::get_env_var(ENV_EMAIL_SMTP_PASSWORD)?;
-        Ok(Box::new(EmailViaSmtp {
+        Ok(Box::new(Self {
             host,
             port,
             user,

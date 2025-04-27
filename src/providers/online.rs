@@ -1,10 +1,11 @@
 use super::{ProviderFactoryTrait, ProviderTrait, ServerInfo};
-use crate::{Authentication, LibError};
+use crate::{api_error_check, reqwest_blocking_builder_send, Authentication, LibError};
 use array_tool::vec::Intersect;
 use http::Method;
 use reqwest::blocking::Response;
 use serde::Deserialize;
 use serde_json::Value;
+use tracing::{debug, trace};
 
 // Online implementation
 
@@ -54,13 +55,13 @@ struct OnlineDediboxProductStock {
 }
 
 /// Used for API result deserialisation, with only interesting fields implemented
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct OnlineDediboxProductDatacenter {
     name: String,
 }
 
 /// Used for API result deserialisation, with only interesting fields implemented
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct OnlineDediboxProductAvailability {
     available: bool,
     datacenters: Vec<OnlineDediboxProductDatacenter>,
@@ -126,29 +127,17 @@ impl Online {
         })
     }
 
-    /// Fallback error handler for queries
-    fn do_error_if_not_successful(response: &Response) -> Result<(), LibError> {
-        if response.status().is_success() {
-            return Ok(());
-        }
-
-        Err(LibError::ApiError {
-            message: format!(
-                "Error during Online dedibox query: code {}",
-                response.status()
-            ),
-        })
-    }
-
     /// Executes simple authenticated get queries which fails only on transport errors
-    fn get_api_authenticated(&self, url: &str) -> Result<Response, LibError> {
-        let response = crate::create_authenticated_request_builder(
+    fn get_authenticated_url(&self, url: &str) -> Result<Response, LibError> {
+        let builder = crate::create_authenticated_request_builder(
             Method::GET,
             url,
             Authentication::bearer_token(&self.api_token),
-        )
-        .send()
-        .map_err(|source| LibError::RequestError { source })?;
+        );
+
+        let response = reqwest_blocking_builder_send(builder)
+            .map_err(|source| LibError::RequestError { source })?;
+        let response = api_error_check(response, "Online dedibox request error")?;
 
         Ok(response)
     }
@@ -169,15 +158,14 @@ impl Online {
     /// Gets all plans, with product ranges and actual products
     fn get_plans(&self) -> Result<Vec<OnlineDediboxProduct>, LibError> {
         let url = "https://api.online.net/api/v1/dedibox/plans";
-        let response = self.get_api_authenticated(&url)?;
-
-        // fallback error handler
-        Self::do_error_if_not_successful(&response)?;
+        let response = self.get_authenticated_url(&url)?;
 
         // reqwest generic deserialize
         let ranges = response
             .json::<Value>()
             .map_err(|source| LibError::RequestError { source })?;
+
+        trace!("Online plans: {ranges:?}");
 
         // extract enum value
         let ranges = Self::extract_serde_value_object_variant_value("root", ranges)?;
@@ -201,26 +189,20 @@ impl Online {
     }
 
     /// Gets a specific dedicated server product availability
-    fn get_product_availability(&self, product_id: &str) -> Result<bool, LibError> {
+    fn get_product_availability(
+        &self,
+        product_id: &str,
+    ) -> Result<OnlineDediboxProductAvailability, LibError> {
         let url = format!("https://api.online.net/api/v1/dedibox/availability/{product_id}");
-        let response = self.get_api_authenticated(&url)?;
-
-        // fallback error handler
-        Self::do_error_if_not_successful(&response)?;
+        let response = self.get_authenticated_url(&url)?;
 
         // reqwest deserialize and check
         let result = response
             .json::<OnlineDediboxProductAvailability>()
             .map_err(|source| LibError::RequestError { source })?;
 
-        // if we do not filter on datacenters, any of them will be fine
-        if self.datacenters.len() == 0 {
-            return Ok(result.available);
-        }
-
-        // extract available datacenter names, and find if any are in common with desired ones
-        let result: Vec<String> = result.datacenters.iter().map(|d| d.name.clone()).collect();
-        Ok(self.datacenters.intersect(result).len() > 0)
+        trace!("Online product availability : {result:?}");
+        Ok(result)
     }
 }
 
@@ -240,17 +222,38 @@ impl ProviderTrait for Online {
     }
 
     /// Collects provider inventory.
-    fn inventory(&self, all: bool) -> Result<Vec<ServerInfo>, LibError> {
-        Ok(self
+    fn inventory(&self, include_unavailable: bool) -> Result<Vec<ServerInfo>, LibError> {
+        let servers = self
             .get_plans()?
             .iter()
-            .filter(|product| product.is_available() || all)
+            .filter(|product| product.is_available() || include_unavailable)
             .map(|offer| offer.into())
-            .collect())
+            .collect();
+        debug!("Online plans : {servers:?}");
+        Ok(servers)
     }
 
     /// Checks provider for the availability of a given server type.
     fn check(&self, server: &str) -> Result<bool, LibError> {
-        self.get_product_availability(server)
+        let availability = self.get_product_availability(server)?;
+
+        // if we do not filter on datacenters, any of them will be fine
+        if self.datacenters.len() == 0 {
+            debug!(
+                "Online unfiltered availability : {}",
+                availability.available
+            );
+            return Ok(availability.available);
+        }
+
+        // extract available datacenter names, and find if any are in common with desired ones
+        let result: Vec<String> = availability
+            .datacenters
+            .iter()
+            .map(|d| d.name.clone())
+            .collect();
+        let result = self.datacenters.intersect(result);
+        debug!("Online filtered availability : {result:?}",);
+        Ok(result.len() > 0)
     }
 }

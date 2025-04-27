@@ -140,6 +140,22 @@ command. Here are some example use of the storage option :
     # only downside is that you could get spurious notifications
     # on reboot as the /tmp directory is usually cleaned upon boot.
 
+# Logging
+
+To activate logging, use the `RUST_LOG` environment variable
+
+    export RUST_LOG=debug
+
+Valid values are `trace`, `debug`, `info`, `warn`, or it defaults to `error`.
+
+To log only for this package (and not dependencies)
+
+    RUST_LOG=dedicated_server_availability_watcher=trace
+
+To activate the span events from tracing, use the RUST_LOG_SPAN_EVENTS environment variable
+
+    export RUST_LOG_SPAN_EVENTS=full
+
 # Compilation
 
 Build for release :
@@ -454,6 +470,14 @@ Dependency management
       ----              -------  ------  ------  ----    --------
       chumsky->stacker  0.1.20   0.1.21  0.1.21  Normal  ---
       stacker->psm      0.1.25   0.1.26  0.1.26  Normal  ---
+
+    cargo update
+
+      Updating crates.io index
+        Locking 3 packages to latest compatible versions
+      Updating psm v0.1.25 -> v0.1.26
+      Updating stacker v0.1.20 -> v0.1.21
+      Updating syn v2.0.100 -> v2.0.101
 
 Statistic about "unsafe" code
 

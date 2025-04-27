@@ -1,6 +1,7 @@
-use anyhow::Result;
+use anyhow;
 use clap::{Parser, Subcommand};
 use dedicated_server_availability_watcher::{notifiers, providers};
+use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
 
 // CLAP command line arguments declaration
 
@@ -74,8 +75,13 @@ enum NotifierCommands {
 }
 
 /// Main entrypoint, uses "clap" crate for argument handling
-fn main() -> Result<()> {
+fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
+
+    tracing_subscriber::fmt()
+        .with_span_events(FmtSpan::CLOSE)
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
 
     match &cli.command {
         // Notifier actions

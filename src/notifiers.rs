@@ -1,8 +1,6 @@
-use anyhow;
-use anyhow::Context;
-use colored::Colorize;
-
 use crate::{CheckResult, LibError};
+use colored::Colorize;
+use tracing::{info, instrument};
 
 /// Provides the implementation for IFTTT-Webhook notifiers
 #[cfg(feature = "ifttt-webhook")]
@@ -104,19 +102,17 @@ pub struct TestRunner {
 
 impl TestRunner {
     /// Builds an instance
-    pub fn new(notifier_name: &str) -> anyhow::Result<Self> {
+    pub fn new(notifier_name: &str) -> Result<Self, LibError> {
         Ok(Self {
-            notifier: Factory::from_env_by_name(notifier_name)
-                .with_context(|| format!("while setting up notifier {notifier_name}"))?,
+            notifier: Factory::from_env_by_name(notifier_name)?,
         })
     }
 
     /// Tests selected notifier.
-    pub fn test(&self) -> anyhow::Result<()> {
-        self.notifier
-            .test()
-            .with_context(|| format!("while testing notifier {}", self.notifier.name()))?;
-        println!("{}", "Notification sent".to_string().green());
+    #[instrument(skip_all, name = "Test notifier", level = "debug")]
+    pub fn test(&self) -> Result<(), LibError> {
+        self.notifier.test()?;
+        info!("{}", "Notification sent".to_string());
         Ok(())
     }
 }

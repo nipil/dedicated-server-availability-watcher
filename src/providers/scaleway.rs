@@ -1,9 +1,10 @@
 use super::{ProviderFactoryTrait, ProviderTrait, ServerInfo};
-use crate::{Authentication, LibError};
+use crate::{api_error_check, reqwest_blocking_builder_send, Authentication, LibError};
 use http::{Method, StatusCode};
 use reqwest::blocking::Response;
 use serde::Deserialize;
 use std::collections::HashMap;
+use tracing::{debug, trace};
 use uuid::Uuid;
 
 // Scaleway implementation
@@ -24,19 +25,19 @@ struct ScalewayBaremetalOffers {
 }
 
 /// Used for API result deserialisation, with only interesting fields implemented
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 struct ScalewayBaremetalOfferMemory {
     capacity: u64,
 }
 
 /// Used for API result deserialisation, with only interesting fields implemented
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 struct ScalewayBaremetalOfferDisk {
     capacity: u64,
 }
 
 /// Used for API result deserialisation, with only interesting fields implemented
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 struct ScalewayBaremetalOffer {
     id: String,
     name: String,
@@ -98,30 +99,15 @@ impl Scaleway {
         Ok(Self { secret_key, zones })
     }
 
-    /// Fallback error handler for queries
-    fn do_error_if_not_successful(response: &Response) -> Result<(), LibError> {
-        if response.status().is_success() {
-            return Ok(());
-        }
-
-        Err(LibError::ApiError {
-            message: format!(
-                "Error during Scaleway baremetal query: code {}",
-                response.status()
-            ),
-        })
-    }
-
     /// Executes simple authenticated get queries which fails only on transport errors
     fn get_api_authenticated(&self, url: &str) -> Result<Response, LibError> {
-        let response = crate::create_authenticated_request_builder(
+        let builder = crate::create_authenticated_request_builder(
             Method::GET,
             url,
             Authentication::x_auth_token(&self.secret_key),
-        )
-        .send()
-        .map_err(|source| LibError::RequestError { source })?;
-
+        );
+        let response = reqwest_blocking_builder_send(builder)
+            .map_err(|source| LibError::RequestError { source })?;
         Ok(response)
     }
 
@@ -129,9 +115,7 @@ impl Scaleway {
     fn get_zone_offers(&self, zone: &str) -> Result<ScalewayBaremetalOffers, LibError> {
         let url = format!("https://api.scaleway.com/baremetal/v1/zones/{zone}/offers");
         let response = self.get_api_authenticated(&url)?;
-
-        // fallback error handler
-        Self::do_error_if_not_successful(&response)?;
+        let response = api_error_check(response, "Scaleway baremetal request error")?;
 
         // reqwest deserialize and check
         response
@@ -187,15 +171,15 @@ impl Scaleway {
             return Ok(None);
         }
 
-        // fallback error handler
-        Self::do_error_if_not_successful(&response)?;
+        let response = api_error_check(response, "Scaleway baremetal request error")?;
 
         // reqwest deserialize and check
-        Ok(Some(
-            response
-                .json::<ScalewayBaremetalOffer>()
-                .map_err(|source| LibError::RequestError { source })?,
-        ))
+        let zone_offer = response
+            .json::<ScalewayBaremetalOffer>()
+            .map_err(|source| LibError::RequestError { source })?;
+
+        trace!("Scaleway zone offer : {zone_offer:?}");
+        Ok(Some(zone_offer))
     }
 
     /// Gets a specific offer.
@@ -220,7 +204,9 @@ impl Scaleway {
             }
         }
 
-        // We could have returned an Option if on offer was found.
+        debug!("Scaleway offer : {result:?}");
+
+        // We could have returned an Option if no offer was found.
         // By choice, we chose to produce an error in that case.
         result.ok_or(LibError::UnknownServer {
             server: offer_id.to_string(),
@@ -244,18 +230,17 @@ impl ProviderTrait for Scaleway {
     }
 
     /// Collects provider inventory.
-    fn inventory(&self, all: bool) -> Result<Vec<ServerInfo>, LibError> {
+    fn inventory(&self, include_unavailable: bool) -> Result<Vec<ServerInfo>, LibError> {
         Ok(self
             .get_offers()?
             .iter()
-            .filter(|offer| offer.is_available() || all)
+            .filter(|offer| offer.is_available() || include_unavailable)
             .map(|offer| offer.into())
             .collect())
     }
 
     /// Checks provider for the availability of a given server type.
     fn check(&self, server: &str) -> Result<bool, LibError> {
-        let offer = self.get_offer(server)?;
-        Ok(offer.is_available())
+        Ok(self.get_offer(server)?.is_available())
     }
 }

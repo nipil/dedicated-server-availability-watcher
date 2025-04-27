@@ -1,5 +1,5 @@
 use super::{NotifierFactoryTrait, NotifierTrait};
-use crate::{CheckResult, LibError};
+use crate::{reqwest_blocking_builder_send, CheckResult, LibError};
 use reqwest::blocking::Response;
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -74,11 +74,11 @@ trait WebHookPoster {
     /// Posts a request and handle Ifttt-Webhook specific errors
     fn post(url: &str, body: &str) -> Result<Response, LibError> {
         let client = reqwest::blocking::Client::new();
-        let response = client
+        let builder = client
             .post(url)
             .header("Content-Type", "application/json")
-            .body(body.to_string())
-            .send()
+            .body(body.to_string());
+        let response = reqwest_blocking_builder_send(builder)
             .map_err(|source| LibError::RequestError { source })?;
 
         if response.status().is_success() {

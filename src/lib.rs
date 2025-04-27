@@ -8,12 +8,13 @@
 //! See modules implementations for available handlers.
 
 use http::Method;
-use reqwest::blocking::{Client, RequestBuilder};
+use reqwest::blocking::Response;
 use serde::Serialize;
 use std::fmt;
 use std::fmt::Display;
 use std::{env, io};
 use thiserror::Error;
+use tracing::{instrument, trace};
 
 /// Provides the implementation for CheckResult notifiers
 pub mod notifiers;
@@ -27,6 +28,10 @@ pub mod storage;
 /// NotifierError enumerates all possible errors returned by this library.
 #[derive(Error, Debug)]
 pub enum LibError {
+    /// Generic error
+    #[error("Generic error")]
+    GenericError { message: String },
+
     /// input/output errors
     #[error("Input/output error")]
     // FIXME: faire marcher le #from : IOError(#[from] io::Error),
@@ -71,6 +76,24 @@ pub enum LibError {
     EmailError { message: String },
 }
 
+// Utility function to trace a reqwest from start to finish
+#[instrument(level = "trace", ret)]
+fn reqwest_blocking_builder_send(
+    builder: reqwest::blocking::RequestBuilder,
+) -> reqwest::Result<reqwest::blocking::Response> {
+    return builder.send();
+}
+
+/// Error checking on API calls : anything but a 2xx code triggers a LibError
+fn api_error_check(response: Response, error_message: &str) -> Result<Response, LibError> {
+    if response.status().is_success() {
+        return Ok(response);
+    }
+    Err(LibError::ApiError {
+        message: format!("{error_message}: code {}", response.status()),
+    })
+}
+
 /// Utility function to get an environment variable by name and trim it
 pub fn get_env_var(name: &str) -> Result<String, LibError> {
     env::var(name)
@@ -94,19 +117,20 @@ pub fn get_env_var_default(name: &str, default: &str) -> String {
 /// Splits a CSV string into tokens, and verify that no token is empty
 pub fn tokenize_optional_csv_str(csv: &Option<String>) -> Result<Vec<String>, LibError> {
     Ok(match csv {
+        None => Vec::new(),
         Some(csv) => {
             // split and trim each token
-            let result: Vec<String> = csv.split(',').map(|s| s.trim().to_string()).collect();
+            let tokens: Vec<String> = csv.split(',').map(|s| s.trim().to_string()).collect();
+            trace!("tokenize_optional_csv_str some tokens : {tokens:?}");
             // verify that no token is empty
-            if result.iter().find(|i| i.is_empty()).is_some() {
+            if tokens.iter().find(|i| i.is_empty()).is_some() {
                 return Err(LibError::ValueError {
                     name: "found empty token in comma separated string".into(),
                     value: csv.into(),
                 });
             }
-            result
+            tokens
         }
-        None => Vec::new(),
     })
 }
 
@@ -137,8 +161,8 @@ fn create_authenticated_request_builder(
     method: Method,
     url: &str,
     auth: Authentication,
-) -> RequestBuilder {
-    Client::new()
+) -> reqwest::blocking::RequestBuilder {
+    reqwest::blocking::Client::new()
         .request(method, url)
         .header(auth.header, auth.value)
 }
@@ -146,7 +170,7 @@ fn create_authenticated_request_builder(
 /// CheckResult holds the data between providers and notifiers :
 /// - `provider::check` is the data source
 /// - `notifier::notify` is the data sink
-#[derive(PartialEq, Serialize)]
+#[derive(PartialEq, Serialize, Debug)]
 pub struct CheckResult {
     pub provider_name: String,
     pub available_servers: Vec<String>,
@@ -174,7 +198,9 @@ impl CheckResult {
 
     /// Serializes to json
     fn to_json(&self) -> Result<String, LibError> {
-        serde_json::to_string(&self).map_err(|source| LibError::JsonError { source })
+        let result = serde_json::to_string(&self).map_err(|source| LibError::JsonError { source });
+        trace!("CheckResult to_json : {result:?}");
+        result
     }
 }
 

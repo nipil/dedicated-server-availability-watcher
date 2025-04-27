@@ -2,6 +2,7 @@ use crate::{CheckResult, LibError};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::{fs, path};
+use tracing::{debug, instrument, trace, warn};
 
 // Storage
 
@@ -20,15 +21,17 @@ pub struct CheckResultStorage {
 ///
 /// We use the convenience function for Sha256 as we work blocking and data is small
 ///
-fn get_sha256_string<T: Serialize>(value: &T) -> Result<String, LibError> {
+fn to_json_sha256<T: Serialize>(value: &T) -> Result<String, LibError> {
     let json = serde_json::to_string(&value).map_err(|source| LibError::JsonError { source })?;
-    let hash = Sha256::digest(json);
-    Ok(format!("{hash:x}"))
+    let hash = format!("{:x}", Sha256::digest(&json));
+    trace!("to_json_sha256: {json:?} -> {hash:?}");
+    Ok(hash)
 }
 
 impl CheckResultStorage {
     /// Builds a new storage
     pub fn new(path: &path::PathBuf) -> Result<Self, LibError> {
+        fs::create_dir_all(&path).map_err(|err| return LibError::IOError { source: err })?;
         if !path.is_dir() {
             return Err(LibError::ValueError {
                 name: "Storage directory is not an accessible directory".to_string(),
@@ -44,7 +47,7 @@ impl CheckResultStorage {
         provider_name: &str,
         servers: &Vec<String>,
     ) -> Result<path::PathBuf, LibError> {
-        let hash = get_sha256_string(servers)?;
+        let hash = to_json_sha256(servers)?;
         let file_name = format!("{provider_name}-{hash}.sha256");
         let mut path = self.path.clone();
         path.push(file_name);
@@ -52,6 +55,7 @@ impl CheckResultStorage {
     }
 
     /// Stores the hash of a provided provider/servers combo
+    #[instrument(skip_all, level = "debug")]
     pub fn put_hash(
         &self,
         provider_name: &str,
@@ -59,7 +63,11 @@ impl CheckResultStorage {
         check_result: &CheckResult,
     ) -> Result<(), LibError> {
         let path = self.get_path(&provider_name, &servers)?;
-        let available_server_hash = get_sha256_string(&check_result.available_servers)?;
+        let available_server_hash = to_json_sha256(&check_result.available_servers)?;
+        debug!(
+            "put_hash {available_server_hash} to {}",
+            path.to_string_lossy()
+        );
         fs::write(path, available_server_hash).map_err(|source| LibError::IOError { source })
     }
 
@@ -76,6 +84,7 @@ impl CheckResultStorage {
     /// Returns None if the file was simply not found
     ///
     /// Returns Some(String) if a string has been read successfully from the file
+    #[instrument(skip_all, level = "debug")]
     pub fn get_hash(
         &self,
         provider_name: &str,
@@ -84,7 +93,7 @@ impl CheckResultStorage {
         // not being able to build the file path is a problem, so we might return an error
         let path = self.get_path(&provider_name, &servers)?;
         // handle the result of reading the file as a textual string
-        match fs::read_to_string(path) {
+        match fs::read_to_string(&path) {
             Err(err) => match err.kind() {
                 // not being able to read the file IF IT DOES NOT EXIST is NOT a problem.
                 std::io::ErrorKind::NotFound => Ok(None),
@@ -92,7 +101,14 @@ impl CheckResultStorage {
                 _ => Err(LibError::IOError { source: err }),
             },
             // if the string was read successfully, trim it to remove any whitespace and newlines
-            Ok(content) => Ok(Some(content.trim().to_string())),
+            Ok(content) => {
+                let stored_available_server_hash = content.trim().to_string();
+                debug!(
+                    "get_hash {stored_available_server_hash} from {}",
+                    path.to_string_lossy()
+                );
+                Ok(Some(stored_available_server_hash))
+            }
         }
     }
 
@@ -105,13 +121,13 @@ impl CheckResultStorage {
         check_result: &CheckResult,
     ) -> Result<bool, LibError> {
         // get eventual stored string or produce an error if something critical happened
-        let hash = self.get_hash(provider_name, servers)?;
-        match hash {
+        let stored_hash = self.get_hash(provider_name, servers)?;
+        match stored_hash {
             // by design, if the hash was not present on disk, check_result is deemed not equal
             None => Ok(false),
             // otherwise, compute the current check_result and compare it to the stored one
             Some(stored_hash) => {
-                let available_server_hash = get_sha256_string(&check_result.available_servers)?;
+                let available_server_hash = to_json_sha256(&check_result.available_servers)?;
                 Ok(available_server_hash == stored_hash)
             }
         }

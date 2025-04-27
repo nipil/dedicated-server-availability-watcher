@@ -1,3 +1,5 @@
+use tracing::{debug, info, instrument};
+
 /// Provides the implementation for the "online" provider
 #[cfg(feature = "online")]
 pub mod online;
@@ -15,12 +17,12 @@ use crate::notifiers::NotifierTrait;
 use crate::storage::CheckResultStorage;
 use crate::CheckResult;
 use crate::LibError;
-use anyhow;
-use anyhow::Context;
+use crate::LibError::GenericError;
 use colored::Colorize;
 use std::{env, path};
 
 /// Defines the common information returned by `ProviderTrait::inventory()`.
+#[derive(Clone, Debug)]
 pub struct ServerInfo {
     pub reference: String,
     pub memory: String,
@@ -35,8 +37,8 @@ pub trait ProviderTrait {
 
     /// Prints a list of every kind of server known to the provider.
     /// By default, does not include servers which are out of stock.
-    /// Set 'all' to true to include unavailable server kinds.
-    fn inventory(&self, all: bool) -> Result<Vec<ServerInfo>, LibError>;
+    /// Set 'include_unavailable' to true to include unavailable server kinds.
+    fn inventory(&self, include_unavailable: bool) -> Result<Vec<ServerInfo>, LibError>;
 
     /// Checks the given provider for availability of a specific server type.
     fn check(&self, server: &str) -> Result<bool, LibError>;
@@ -85,36 +87,35 @@ struct Runner;
 
 impl Runner {
     /// Builds an actual notifier from a notifier name
-    fn build_provider(name: &str) -> anyhow::Result<Box<dyn ProviderTrait>> {
-        Ok(Factory::from_env_by_name(name)
-            .with_context(|| format!("while setting up provider {name}"))?)
+    fn build_provider(name: &str) -> Result<Box<dyn ProviderTrait>, LibError> {
+        Ok(Factory::from_env_by_name(name)?)
     }
 
     /// Builds an actual notifier from a notifier name
-    fn build_notifier(name: &Option<String>) -> anyhow::Result<Option<Box<dyn NotifierTrait>>> {
+    fn build_notifier(name: &Option<String>) -> Result<Option<Box<dyn NotifierTrait>>, LibError> {
         Ok(match name {
             None => None,
-            Some(notifier) => Some(
-                notifiers::Factory::from_env_by_name(notifier)
-                    .with_context(|| format!("while setting up notifier {notifier}"))?,
-            ),
+            Some(notifier) => Some(notifiers::Factory::from_env_by_name(notifier)?),
         })
     }
 
     /// Builds an accessor for stored results
-    fn build_storage(storage_dir: &Option<String>) -> anyhow::Result<CheckResultStorage> {
+    fn build_storage(storage_dir: &Option<String>) -> Result<CheckResultStorage, LibError> {
         let path = match storage_dir {
             Some(dir) => path::Path::new(&dir).to_path_buf(),
-            None => env::current_dir().with_context(|| "Current directory is not accessible")?,
+            None => env::current_dir().map_err(|err| GenericError {
+                message: format!("Could not get current directory : {err}"),
+            })?,
         };
-        Ok(CheckResultStorage::new(&path).context("while initializing CheckResultStorage")?)
+        Ok(CheckResultStorage::new(&path)?)
     }
 
-    /// Builds an actual notifier from a notifier name
+    /// Notify results using provided notifier
+    #[instrument(skip_all, name = "Notify result")]
     fn notify_result(
         notifier: &Option<Box<dyn NotifierTrait>>,
         result: &CheckResult,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), LibError> {
         match notifier {
             None => {
                 for srv in result.available_servers.iter() {
@@ -122,9 +123,7 @@ impl Runner {
                 }
             }
             Some(notifier) => {
-                notifier.notify(&result).with_context(|| {
-                    format!("while notifying results through {}", notifier.name())
-                })?;
+                notifier.notify(&result)?;
             }
         }
         Ok(())
@@ -153,7 +152,7 @@ pub struct InventoryRunner {
 
 impl InventoryRunner {
     /// Builds an instance so that we do not endlessly repeat arguments
-    pub fn new(provider_name: &str) -> anyhow::Result<Self> {
+    pub fn new(provider_name: &str) -> Result<Self, LibError> {
         Ok(Self {
             provider: Runner::build_provider(provider_name)?,
         })
@@ -162,21 +161,12 @@ impl InventoryRunner {
     /// Prints a list of every kind of server known to the provider.
     /// By default, does not include servers which are out of stock
     /// Set `all` to true to include unavailable server kinds
-    pub fn list_inventory(&self, all: bool) -> anyhow::Result<()> {
-        println!("Working...");
-        let inventory = self.provider.inventory(all).with_context(|| {
-            format!(
-                "while getting inventory for provider {}",
-                self.provider.name()
-            )
-        })?;
-
+    pub fn list_inventory(&self, all: bool) -> Result<(), LibError> {
+        info!("Fetching inventory ({:?}", all);
+        let inventory = self.provider.inventory(all)?;
         if inventory.is_empty() {
-            println!("No servers found");
             return Ok(());
         }
-
-        println!("Known servers:");
         for item in inventory.iter() {
             match item {
                 info => {
@@ -214,7 +204,7 @@ impl<'a> CheckRunner<'a> {
         servers: &'a Vec<String>,
         notifier_name: &Option<String>,
         storage_dir: &'a Option<String>,
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self, LibError> {
         Ok(Self {
             provider: Runner::build_provider(provider_name)?,
             servers,
@@ -224,13 +214,9 @@ impl<'a> CheckRunner<'a> {
     }
 
     /// Checks the given provider for availability of a specific server type.
-    fn check_servers(&self, result: &mut CheckResult) -> anyhow::Result<()> {
+    fn check_servers(&self, result: &mut CheckResult) -> Result<(), LibError> {
         for server in self.servers.iter() {
-            if self
-                .provider
-                .check(server)
-                .with_context(|| format!("while checking for server {server}"))?
-            {
+            if self.provider.check(server)? {
                 result.available_servers.push(server.clone());
             }
         }
@@ -238,19 +224,19 @@ impl<'a> CheckRunner<'a> {
     }
 
     /// Checks the given provider, compare with previous result, and notify if needed
-    pub fn check_once(&self) -> anyhow::Result<()> {
+    pub fn check_once(&self) -> Result<(), LibError> {
         let provider_name = self.provider.name();
 
         // get current result
         let mut latest = CheckResult::new(provider_name);
-        self.check_servers(&mut latest)
-            .with_context(|| format!("while checking provider {}", provider_name))?;
+        self.check_servers(&mut latest)?;
 
         // do nothing more if there was no change
         if self
             .storage
             .is_equal(&provider_name, &self.servers, &latest)?
         {
+            debug!("check_once: storage is equal");
             return Ok(());
         }
 

@@ -1,6 +1,8 @@
 use super::{ProviderFactoryTrait, ProviderTrait, ServerInfo};
-use crate::LibError;
+use crate::{api_error_check, reqwest_blocking_builder_send, LibError};
+use reqwest::blocking::Client;
 use serde::Deserialize;
+use tracing::{debug, trace};
 
 // OVH implementation
 
@@ -14,7 +16,7 @@ const ENV_NAME_OVH_EXCLUDE_DATACENTER: &str = "OVH_EXCLUDE_DATACENTER";
 const OVH_URL: &str = "https://api.ovh.com/1.0/dedicated/server/datacenter/availabilities";
 
 /// Used for API result deserialisation, with only interesting fields implemented
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct OvhDedicatedServerInformation {
     datacenters: Vec<OvhDedicatedServerDatacenterAvailability>,
     memory: Option<String>,
@@ -35,7 +37,7 @@ impl OvhDedicatedServerInformation {
 }
 
 /// Used for API result deserialisation, with only interesting fields implemented
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct OvhDedicatedServerDatacenterAvailability {
     availability: String,
     datacenter: String,
@@ -118,24 +120,34 @@ impl Ovh {
         }
 
         // Actual request
-        let response = reqwest::blocking::Client::new()
-            .get(OVH_URL)
-            .query(&query)
-            .send()
+        let builder = Client::new().get(OVH_URL).query(&query);
+        let response = reqwest_blocking_builder_send(builder)
             .map_err(|source| LibError::RequestError { source })?;
-
-        if !response.status().is_success() {
-            return Err(LibError::ApiError {
-                message: format!("Error during OVH query: code {}", response.status()),
-            });
-        }
+        let response = api_error_check(response, "OVH request error")?;
 
         // Deserialization
         let results: Vec<OvhDedicatedServerInformation> = response
             .json()
             .map_err(|source| LibError::RequestError { source })?;
 
+        trace!("OVH response: {results:?}");
         Ok(results)
+    }
+
+    /// A filtered collection of ServerInfo from raw Ovh server information
+    fn get_servers_info(
+        &self,
+        server: Option<&str>,
+        include_unavailable: bool,
+    ) -> Result<Vec<ServerInfo>, LibError> {
+        let servers = self
+            .api_get_dedicated_server_datacenter_availabilities(server)?
+            .iter()
+            .map(|item| ServerInfo::from(item))
+            .filter(|item: &ServerInfo| item.available || include_unavailable)
+            .collect();
+        debug!("Servers info : {servers:?}");
+        Ok(servers)
     }
 }
 
@@ -143,7 +155,7 @@ impl ProviderFactoryTrait for Ovh {
     /// Builds an Ovh provider from environment variables.
     fn from_env() -> Result<Box<dyn ProviderTrait>, LibError> {
         let excluded_datacenters = crate::get_env_var_option(ENV_NAME_OVH_EXCLUDE_DATACENTER);
-        Ok(Box::new(Ovh::new(&excluded_datacenters)?))
+        Ok(Box::new(Self::new(&excluded_datacenters)?))
     }
 }
 
@@ -154,32 +166,13 @@ impl ProviderTrait for Ovh {
     }
 
     /// Collects provider inventory.
-    fn inventory(&self, all: bool) -> Result<Vec<ServerInfo>, LibError> {
-        let results = self.api_get_dedicated_server_datacenter_availabilities(None)?;
-
-        let mut infos = Vec::new();
-
-        for server in results.iter() {
-            //skip unavailable except if requested
-            if !server.is_available() && !all {
-                continue;
-            }
-
-            infos.push(server.into());
-        }
-
-        Ok(infos)
+    fn inventory(&self, include_unavailable: bool) -> Result<Vec<ServerInfo>, LibError> {
+        self.get_servers_info(None, include_unavailable)
     }
 
     /// Checks provider for the availability of a given server type.
     fn check(&self, server: &str) -> Result<bool, LibError> {
-        let results = self.api_get_dedicated_server_datacenter_availabilities(Some(server))?;
-        // Server ids can have duplicates (location, specs, ...)
-        for result in results {
-            if result.is_available() {
-                return Ok(true);
-            }
-        }
-        Ok(false)
+        self.get_servers_info(Some(server), false)
+            .map(|servers| servers.len() > 0)
     }
 }

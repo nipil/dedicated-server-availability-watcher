@@ -1,5 +1,5 @@
 use super::{NotifierFactoryTrait, NotifierTrait};
-use crate::{CheckResult, LibError};
+use crate::{reqwest_blocking_builder_send, CheckResult, LibError};
 use reqwest::blocking::{Client, RequestBuilder};
 use std::collections::HashMap;
 
@@ -19,14 +19,13 @@ const ENV_SIMPLE_GET_PARAM_NAME_SERVERS: &str = "SIMPLE_GET_PARAM_NAME_SERVERS";
 
 /// Utility function to handle the execution of the request
 fn send_request(builder: RequestBuilder, notifier_name: &str) -> Result<(), LibError> {
-    let response = builder
-        .send()
+    let response = reqwest_blocking_builder_send(builder)
         .map_err(|source| LibError::RequestError { source })?;
 
     response
         .status()
         .is_success()
-        .then_some(())
+        .then_some(()) // FIXME : trace the resulting page
         .ok_or(LibError::ApiError {
             message: format!(
                 "Error {} while notifying {notifier_name}: {}",
@@ -55,7 +54,7 @@ impl NotifierFactoryTrait for SimpleGet {
         let url = crate::get_env_var(ENV_SIMPLE_URL)?;
         let param_provider = crate::get_env_var(ENV_SIMPLE_GET_PARAM_NAME_PROVIDER)?;
         let param_servers = crate::get_env_var(ENV_SIMPLE_GET_PARAM_NAME_SERVERS)?;
-        Ok(Box::new(SimpleGet {
+        Ok(Box::new(Self {
             url,
             param_provider,
             param_servers,
@@ -103,7 +102,7 @@ impl NotifierFactoryTrait for SimplePost {
     /// Builds a SimplePost notifier from environment variables.
     fn from_env() -> Result<Box<dyn NotifierTrait>, LibError> {
         let url = crate::get_env_var(ENV_SIMPLE_URL)?;
-        Ok(Box::new(SimplePost { url }))
+        Ok(Box::new(Self { url }))
     }
 }
 
@@ -136,7 +135,7 @@ impl NotifierFactoryTrait for SimplePut {
     /// Builds a SimplePut notifier from environment variables.
     fn from_env() -> Result<Box<dyn NotifierTrait>, LibError> {
         let url = crate::get_env_var(ENV_SIMPLE_URL)?;
-        Ok(Box::new(SimplePut { url }))
+        Ok(Box::new(Self { url }))
     }
 }
 
