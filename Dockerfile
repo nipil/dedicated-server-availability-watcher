@@ -15,10 +15,11 @@ COPY --chown=$user src src
 COPY --chown=$user Cargo.* .
 
 # build as release and install
-RUN cargo auditable install --path .
+RUN cargo auditable install --locked --path .
 
 
 # Use a minimal image and run with a unprivileged user
 FROM gcr.io/distroless/cc-debian12:nonroot
-COPY --from=build /build/target/release/dedicated-server-availability-watcher /usr/local/bin/dedicated-server-availability-watcher
+COPY --from=build --chown=root:root --chmod=755 /build/target/release/dedicated-server-availability-watcher /usr/local/bin/dedicated-server-availability-watcher
+COPY --from=build --chown=root:root --chmod=644 /build/Cargo.* /src/
 ENTRYPOINT ["dedicated-server-availability-watcher"]
